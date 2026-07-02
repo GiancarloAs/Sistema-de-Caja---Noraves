@@ -1,0 +1,108 @@
+HTML
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Caja - Canjes</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f7f6; padding: 40px; display: flex; justify-content: center; }
+        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        input { width: 80%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 18px; text-align: center; text-transform: uppercase; }
+        button { width: 85%; padding: 12px; background: #24b47e; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        button:disabled { background: #cccccc; cursor: not-allowed; }
+        .info-cliente { margin-top: 20px; padding: 15px; border-radius: 4px; background: #eef9f5; display: none; text-align: left; }
+        .alerta { color: red; margin-top: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Validación de Canje</h2>
+    <input type="text" id="codigoInput" placeholder="Introduce el código">
+    <button id="btnBuscar" onclick="buscarCodigo()">Buscar Código</button>
+
+    <div id="errorMsg" class="alerta"></div>
+
+    <div id="seccionCliente" class="info-cliente">
+        <p><strong>Cliente:</strong> <span id="nombreCliente"></span></p>
+        <p><strong>Estado:</strong> <span id="estadoCodigo"></span></p>
+        <button id="btnCanjear" onclick="canjearCodigo()" disabled>Confirmar Canje</button>
+    </div>
+</div>
+
+<script>
+    // 1. CONFIGURACIÓN DE SUPABASE (Cambia esto por tus datos)
+    const SUPABASE_URL = "TU_SUPABASE_URL_AQUÍ";
+    const SUPABASE_KEY = "TU_SUPABASE_ANON_KEY_AQUÍ";
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let codigoActual = "";
+
+    // 2. BUSCAR EL CÓDIGO
+    async function buscarCodigo() {
+        const input = document.getElementById("codigoInput");
+        codigoActual = input.value.trim().toUpperCase();
+        
+        const errorMsg = document.getElementById("errorMsg");
+        const seccionCliente = document.getElementById("seccionCliente");
+        const btnCanjear = document.getElementById("btnCanjear");
+        
+        errorMsg.innerText = "";
+        seccionCliente.style.display = "none";
+
+        if (!codigoActual) return;
+
+        // Consulta a Supabase uniendo la tabla cupones con clientes
+        const { data, error } = await _supabase
+            .from('cupones')
+            .select('estado, clientes(nombre)')
+            .eq('codigo', codigoActual)
+            .maybeSingle();
+
+        if (error || !data) {
+            errorMsg.innerText = "❌ Código inválido o no existe.";
+            return;
+        }
+
+        // Mostrar datos encontrados
+        document.getElementById("nombreCliente").innerText = data.clientes.nombre;
+        const txtEstado = document.getElementById("estadoCodigo");
+        seccionCliente.style.display = "block";
+
+        if (data.estado === 'canjeado') {
+            txtEstado.innerHTML = "<span style='color:red;'>YA CANJEADO</span>";
+            btnCanjear.disabled = true;
+            btnCanjear.innerText = "No disponible";
+        } else {
+            txtEstado.innerHTML = "<span style='color:green;'>DISPONIBLE</span>";
+            btnCanjear.disabled = false;
+            btnCanjear.innerText = "Confirmar Canje";
+        }
+    }
+
+    // 3. HACER EL CANJE Y BLOQUEAR EL BOTÓN
+    async function canjearCodigo() {
+        const btnCanjear = document.getElementById("btnCanjear");
+        btnCanjear.disabled = true; // Bloqueo inmediato en pantalla para evitar doble clic
+        btnCanjear.innerText = "Procesando...";
+
+        const { error } = await _supabase
+            .from('cupones')
+            .update({ estado: 'canjeado', fecha_canje: new Date().toISOString() })
+            .eq('codigo', codigoActual);
+
+        if (error) {
+            alert("Hubo un error al procesar el canje.");
+            btnCanjear.disabled = false;
+            btnCanjear.innerText = "Confirmar Canje";
+        } else {
+            document.getElementById("estadoCodigo").innerHTML = "<span style='color:red;'>CANJEADO CON ÉXITO</span>";
+            btnCanjear.innerText = "¡Canjeado!";
+            // El botón se queda deshabilitado (disabled = true) permanentemente para esta búsqueda
+        }
+    }
+</script>
+</body>
+</html>
