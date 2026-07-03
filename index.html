@@ -1,4 +1,3 @@
-HTML
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -54,15 +53,13 @@ HTML
 </div>
 
 <script>
-  // 1. CONFIGURACIÓN DE SUPABASE
   const SUPABASE_URL = "https://aollztxtygxarlueflxq.supabase.co";
-  const SUPABASE_KEY = "eyJhGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbGx6dHh0eWd4YXJsdWVmbHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3M00wM2w0TnpzImV4cCI6MjQ0N0c2MjA5MTM0M30.v3Lighe_kbpab9j2fVx_qmawKbbsTCX0ZxsoyeZRo-Q";
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbGx6dHh0eWd4YXJsdWVmbHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMjU0NzMsImV4cCI6MjA5ODYwMTQ3M30.v3LIghE_kbpab9j2fVx_qmawKbbsTCX0ZxsoyeZRo-Q";
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let codigoActual = "";
   let tiendaActiva = "";
 
-  // 2. CONTROL DE ACCESO
   function loginTienda() {
       const tienda = document.getElementById("selectTienda").value;
       const pass = document.getElementById("passTienda").value;
@@ -94,7 +91,6 @@ HTML
       document.getElementById("errorMsg").innerText = "";
   }
 
-  // 3. BUSCAR EL CÓDIGO (CON RECONOCIMIENTO DE JQL/RELACIONES DE SUPABASE)
   async function buscarCodigo() {
       const input = document.getElementById("codigoInput");
       codigoActual = input.value.trim().toUpperCase();
@@ -108,7 +104,7 @@ HTML
 
       if (!codigoActual) return;
 
-      // Aquí recuperamos tu consulta relacional que funcionaba perfectamente antes
+      // Consulta relacional exacta compatible con tus grants de SELECT
       const { data, error } = await _supabase
         .from('cupones')
         .select('estado, clientes(nombre)')
@@ -116,12 +112,11 @@ HTML
         .maybeSingle();
 
       if (error || !data) {
-          console.error("Error en la consulta relacional:", error);
+          console.error("Detalle del error:", error);
           errorMsg.innerText = "❌ Código inválido o no existe.";
           return;
       }
 
-      // Mapeo inteligente de la relación de clientes
       const datosCliente = data.clientes || data['clientes!cupones_cliente_id_fkey'];
       document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "Cliente no asignado";
       
@@ -139,7 +134,6 @@ HTML
       }
   }
 
-  // 4. CONFIRMAR CANJE (E INYECTAR LA TIENDA CORRESPONDIENTE)
   async function canjearCodigo() {
       const btnCanjear = document.getElementById("btnCanjear");
       btnCanjear.disabled = true; 
@@ -155,7 +149,7 @@ HTML
           .eq('codigo', codigoActual);
 
       if (error) {
-          console.error("Error al actualizar estado en Supabase:", error);
+          console.error("Error en Update:", error);
           alert("Hubo un error al procesar el canje.");
           btnCanjear.disabled = false;
           btnCanjear.innerText = "Confirmar Canje";
