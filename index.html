@@ -1,4 +1,5 @@
-!DOCTYPE html>
+HTML
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -44,7 +45,7 @@
     <div id="errorMsg" class="alerta"></div>
 
     <div id="seccionCliente" class="info-cliente">
-        <p><strong>Cliente:</strong> <span id="nombreCliente">Juan Pérez</span></p>
+        <p><strong>Cliente:</strong> <span id="nombreCliente"></span></p>
         <p><strong>Estado:</strong> <span id="estadoCodigo"></span></p>
         <button id="btnCanjear" onclick="canjearCodigo()" disabled>Confirmar Canje</button>
     </div>
@@ -93,7 +94,7 @@
       document.getElementById("errorMsg").innerText = "";
   }
 
-  // 3. BUSCAR EL CÓDIGO (Optimizado al 100% sin cruces complejos)
+  // 3. BUSCAR EL CÓDIGO (CON RECONOCIMIENTO DE JQL/RELACIONES DE SUPABASE)
   async function buscarCodigo() {
       const input = document.getElementById("codigoInput");
       codigoActual = input.value.trim().toUpperCase();
@@ -107,18 +108,22 @@
 
       if (!codigoActual) return;
 
-      // Consulta directa ultra simple a la tabla cupones
+      // Aquí recuperamos tu consulta relacional que funcionaba perfectamente antes
       const { data, error } = await _supabase
         .from('cupones')
-        .select('estado')
+        .select('estado, clientes(nombre)')
         .eq('codigo', codigoActual)
         .maybeSingle();
 
       if (error || !data) {
-          console.error("Error directo de consulta:", error);
+          console.error("Error en la consulta relacional:", error);
           errorMsg.innerText = "❌ Código inválido o no existe.";
           return;
       }
+
+      // Mapeo inteligente de la relación de clientes
+      const datosCliente = data.clientes || data['clientes!cupones_cliente_id_fkey'];
+      document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "Cliente no asignado";
       
       const txtEstado = document.getElementById("estadoCodigo");
       seccionCliente.style.display = "block";
@@ -134,7 +139,7 @@
       }
   }
 
-  // 4. CONFIRMAR CANJE
+  // 4. CONFIRMAR CANJE (E INYECTAR LA TIENDA CORRESPONDIENTE)
   async function canjearCodigo() {
       const btnCanjear = document.getElementById("btnCanjear");
       btnCanjear.disabled = true; 
@@ -150,7 +155,7 @@
           .eq('codigo', codigoActual);
 
       if (error) {
-          console.error("Error al actualizar:", error);
+          console.error("Error al actualizar estado en Supabase:", error);
           alert("Hubo un error al procesar el canje.");
           btnCanjear.disabled = false;
           btnCanjear.innerText = "Confirmar Canje";
