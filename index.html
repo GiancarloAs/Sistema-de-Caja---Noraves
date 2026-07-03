@@ -49,7 +49,6 @@
     <div id="seccionCliente" class="info-cliente">
         <span id="badgeOk" class="badge-verificado">✓ IDENTIDAD CONFIRMADA</span>
         <p><strong>Cliente:</strong> <span id="nombreCliente"></span></p>
-        <p><strong>DNI:</strong> <span id="dniCliente"></span></p>
         <p><strong>Teléfono:</strong> <span id="telefonoCliente"></span></p>
         <p><strong>Empresa:</strong> <span id="empresaCliente"></span></p>
         <p><strong>Estado del Cupón:</strong> <span id="estadoCodigo"></span></p>
@@ -63,7 +62,7 @@
         </div>
 
         <div id="seccionBoleta" class="campo-boleta" style="display: none;">
-            <label style="font-size: 14px; font-weight: bold; color: #333;">Número de Boleta emitida:</label>
+            <label style="font-size: 14px; font-weight: bold; color: #333;">Número de Boleta emitida (Obligatorio):</label>
             <input type="text" id="boletaInput" placeholder="Ej: B001-0004321" oninput="validarFiltros()">
         </div>
 
@@ -149,11 +148,12 @@
 
       const datosCliente = data.clientes || data['clientes!cupones_cliente_id_fkey'];
       
+      // Renderizar datos menos el DNI (se mantiene privado para evitar que la cajera haga trampa)
       document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "No registrado";
-      document.getElementById("dniCliente").innerText = datosCliente && datosCliente.dni ? datosCliente.dni : "No registrado";
       document.getElementById("telefonoCliente").innerText = datosCliente && datosCliente.telefono ? datosCliente.telefono : "No registrado";
       document.getElementById("empresaCliente").innerText = datosCliente && datosCliente.empresa ? datosCliente.empresa : "No registrado";
       
+      // Extraer los últimos 3 dígitos del DNI en segundo plano para la validación cruzada
       if (datosCliente && datosCliente.dni) {
           const dniLimpio = datosCliente.dni.toString().trim();
           ultimosDigitosDniCorrectos = dniLimpio.slice(-3);
@@ -187,12 +187,14 @@
       errorDniMsg.innerText = "";
       badgeOk.style.display = "none";
 
+      // 1. Validar que tenga los 3 dígitos puestos
       if (inputDniCaja.length < 3) {
           btnCanjear.disabled = true;
           btnCanjear.innerText = "Falta responder DNI";
           return;
       }
 
+      // 2. Verificar correspondencia exacta con el DNI interno
       if (inputDniCaja !== ultimosDigitosDniCorrectos) {
           errorDniMsg.innerText = "❌ Los dígitos no coinciden. ¡Alerta de fraude!";
           btnCanjear.disabled = true;
@@ -200,15 +202,17 @@
           return;
       }
 
+      // Si pasa el filtro de DNI, encendemos el sello visual interno
       badgeOk.style.display = "inline-block";
 
+      // 3. Condición estricta de Boleta Obligatoria para liberar el botón final
       if (boletaTxt.length > 0) {
           btnCanjear.disabled = false;
           btnCanjear.innerText = "Confirmar Canje";
       } else {
           btnCanjear.disabled = true;
-          btnCanjear.innerText = "Ingrese Boleta";
-       }
+          btnCanjear.innerText = "Ingrese Boleta (Obligatorio)";
+      }
   }
 
   async function canjearCodigo() {
