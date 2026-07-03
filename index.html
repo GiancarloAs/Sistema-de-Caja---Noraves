@@ -55,11 +55,11 @@
         if (!codigoActual) return;
 
         // Consulta a Supabase uniendo la tabla cupones con clientes
-        const { data, error } = await _supabase
-            .from('cupones')
-            .select('estado, clientes(nombre)')
-            .eq('codigo', codigoActual)
-            .maybeSingle();
+       const { data, error } = await _supabase
+      .from('cupones')
+      .select('estado, clientes!cupones_cliente_id_fkey(nombre)')
+      .eq('codigo', codigoActual)
+      .maybeSingle();
 
         if (error || !data) {
             errorMsg.innerText = "❌ Código inválido o no existe.";
@@ -67,8 +67,9 @@
         }
 
         // Mostrar datos encontrados
-        document.getElementById("nombreCliente").innerText = data.clientes.nombre;
-        const txtEstado = document.getElementById("estadoCodigo");
+      const datosCliente = data['clientes!cupones_cliente_id_fkey'] || data.clientes;
+document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "Cliente no asignado";
+const txtEstado = document.getElementById("estadoCodigo");
         seccionCliente.style.display = "block";
 
         if (data.estado === 'canjeado') {
