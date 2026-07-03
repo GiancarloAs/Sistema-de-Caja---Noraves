@@ -7,7 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: Arial, sans-serif; background: #f4f7f6; padding: 40px; display: flex; justify-content: center; align-items: center; min-height: 80vh; }
-        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; position: relative; }
         input, select { width: 85%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; text-align: center; }
         input[type="text"] { text-transform: uppercase; }
         button { width: 90%; padding: 12px; background: #24b47e; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold; margin-top: 10px; }
@@ -54,7 +54,7 @@
 
 <script>
   const SUPABASE_URL = "https://aollztxtygxarlueflxq.supabase.co";
-  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbGx6dHh0eWd4YXJsdWVmbHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMjU0NzMsImV4cCI6MjA5ODYwMTQ3M30.v3LIghE_kbpab9j2fVx_qmawKbbsTCX0ZxsoyeZRo-Q";
+  const SUPABASE_KEY = "eyJhGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbGx6dHh0eWd4YXJsdWVmbHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3M00wM2w0TnpzImV4cCI6MjQ0N0c2MjA5MTM0M30.v3Lighe_kbpab9j2fVx_qmawKbbsTCX0ZxsoyeZRo-Q";
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let codigoActual = "";
@@ -104,7 +104,6 @@
 
       if (!codigoActual) return;
 
-      // Consulta relacional exacta compatible con tus grants de SELECT
       const { data, error } = await _supabase
         .from('cupones')
         .select('estado, clientes(nombre)')
@@ -112,13 +111,13 @@
         .maybeSingle();
 
       if (error || !data) {
-          console.error("Detalle del error:", error);
+          console.error("Error detectado:", error);
           errorMsg.innerText = "❌ Código inválido o no existe.";
           return;
       }
 
       const datosCliente = data.clientes || data['clientes!cupones_cliente_id_fkey'];
-      document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "Cliente no asignado";
+      document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "Cliente Registrado";
       
       const txtEstado = document.getElementById("estadoCodigo");
       seccionCliente.style.display = "block";
