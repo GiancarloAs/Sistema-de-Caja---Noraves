@@ -3,19 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Caja - Canjes</title>
+    <title>Panel de Caja - Canjes Ultraseguros</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: Arial, sans-serif; background: #f4f7f6; padding: 40px; display: flex; justify-content: center; align-items: center; min-height: 80vh; }
-        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; position: relative; }
+        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 420px; text-align: center; position: relative; }
         input, select { width: 85%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; text-align: center; }
         input[type="text"] { text-transform: uppercase; }
         button { width: 90%; padding: 12px; background: #24b47e; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold; margin-top: 10px; }
         button:disabled { background: #cccccc; cursor: not-allowed; }
         .info-cliente { margin-top: 20px; padding: 15px; border-radius: 4px; background: #eef9f5; display: none; text-align: left; }
-        .alerta { color: red; margin-top: 10px; font-weight: bold; }
+        .alerta { color: red; margin-top: 10px; font-weight: bold; text-align: center; }
         .tienda-tag { background: #24b47e; color: white; padding: 5px 10px; border-radius: 20px; font-size: 12px; float: right; font-weight: bold; }
+        .seccion-seguridad { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #24b47e; background: #fff3cd; padding: 10px; border-radius: 4px; }
         .campo-boleta { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc; }
+        .badge-verificado { color: #155724; background-color: #d4edda; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; float: right; display: none; }
     </style>
 </head>
 <body>
@@ -45,15 +47,27 @@
     <div id="errorMsg" class="alerta"></div>
 
     <div id="seccionCliente" class="info-cliente">
+        <span id="badgeOk" class="badge-verificado">✓ IDENTIDAD CONFIRMADA</span>
         <p><strong>Cliente:</strong> <span id="nombreCliente"></span></p>
-        <p><strong>Estado:</strong> <span id="estadoCodigo"></span></p>
+        <p><strong>DNI:</strong> <span id="dniCliente"></span></p>
+        <p><strong>Teléfono:</strong> <span id="telefonoCliente"></span></p>
+        <p><strong>Empresa:</strong> <span id="empresaCliente"></span></p>
+        <p><strong>Estado del Cupón:</strong> <span id="estadoCodigo"></span></p>
         
-        <div id="seccionBoleta" class="campo-boleta" style="display: none;">
-            <label style="font-size: 14px; font-weight: bold; color: #333;">Número de Boleta emitida:</label>
-            <input type="text" id="boletaInput" placeholder="Ej: B001-0004321" oninput="validarFormulario()">
+        <div id="bloqueSeguridad" class="seccion-seguridad" style="display: none;">
+            <label style="font-size: 13px; font-weight: bold; color: #856404; display: block; margin-bottom: 5px;">
+                ⚠️ FILTRO DE SEGURIDAD: Pregunte al cliente los últimos 3 dígitos de su DNI:
+            </label>
+            <input type="text" id="verificarDniInput" maxlength="3" placeholder="Ej: 432" style="width: 50%; padding: 8px; font-size: 18px; letter-spacing: 3px;" oninput="validarFiltros()">
+            <div id="errorDniMsg" style="color: red; font-size: 12px; margin-top: 5px; font-weight: bold;"></div>
         </div>
 
-        <button id="btnCanjear" onclick="canjearCodigo()" disabled>Confirmar Canje</button>
+        <div id="seccionBoleta" class="campo-boleta" style="display: none;">
+            <label style="font-size: 14px; font-weight: bold; color: #333;">Número de Boleta emitida:</label>
+            <input type="text" id="boletaInput" placeholder="Ej: B001-0004321" oninput="validarFiltros()">
+        </div>
+
+        <button id="btnCanjear" onclick="canjearCodigo()" disabled>Complete los filtros</button>
     </div>
     
     <p style="margin-top: 25px; font-size: 12px;"><a href="#" onclick="cerrarSesion()" style="color: #666;">Cerrar Sesión de Caja</a></p>
@@ -66,6 +80,7 @@
 
   let codigoActual = "";
   let tiendaActiva = "";
+  let ultimosDigitosDniCorrectos = "";
 
   function loginTienda() {
       const tienda = document.getElementById("selectTienda").value;
@@ -104,19 +119,25 @@
       
       const errorMsg = document.getElementById("errorMsg");
       const seccionCliente = document.getElementById("seccionCliente");
+      const bloqueSeguridad = document.getElementById("bloqueSeguridad");
       const seccionBoleta = document.getElementById("seccionBoleta");
       const btnCanjear = document.getElementById("btnCanjear");
+      const badgeOk = document.getElementById("badgeOk");
       
       errorMsg.innerText = "";
+      document.getElementById("errorDniMsg").innerText = "";
       seccionCliente.style.display = "none";
+      bloqueSeguridad.style.display = "none";
       seccionBoleta.style.display = "none";
+      badgeOk.style.display = "none";
+      document.getElementById("verificarDniInput").value = "";
       document.getElementById("boletaInput").value = "";
 
       if (!codigoActual) return;
 
       const { data, error } = await _supabase
         .from('cupones')
-        .select('estado, clientes(nombre)')
+        .select('estado, clientes(nombre, dni, telefono, empresa)')
         .eq('codigo', codigoActual)
         .maybeSingle();
 
@@ -127,8 +148,19 @@
       }
 
       const datosCliente = data.clientes || data['clientes!cupones_cliente_id_fkey'];
-      document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "Cliente Registrado";
       
+      document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "No registrado";
+      document.getElementById("dniCliente").innerText = datosCliente && datosCliente.dni ? datosCliente.dni : "No registrado";
+      document.getElementById("telefonoCliente").innerText = datosCliente && datosCliente.telefono ? datosCliente.telefono : "No registrado";
+      document.getElementById("empresaCliente").innerText = datosCliente && datosCliente.empresa ? datosCliente.empresa : "No registrado";
+      
+      if (datosCliente && datosCliente.dni) {
+          const dniLimpio = datosCliente.dni.toString().trim();
+          ultimosDigitosDniCorrectos = dniLimpio.slice(-3);
+      } else {
+          ultimosDigitosDniCorrectos = "000"; 
+      }
+
       const txtEstado = document.getElementById("estadoCodigo");
       seccionCliente.style.display = "block";
 
@@ -138,24 +170,45 @@
           btnCanjear.innerText = "No disponible";
       } else {
           txtEstado.innerHTML = "<span style='color:green;'>DISPONIBLE</span>";
-          seccionBoleta.style.display = "block"; // Mostrar input de boleta
-          btnCanjear.disabled = true; // Deshabilitado hasta que escriba la boleta
-          btnCanjear.innerText = "Ingrese Boleta";
+          bloqueSeguridad.style.display = "block";
+          seccionBoleta.style.display = "block";
+          btnCanjear.disabled = true; 
+          btnCanjear.innerText = "Complete los filtros";
       }
   }
 
-  // Valida en tiempo real que el campo boleta no esté vacío para activar el botón
-  function validarFormulario() {
+  function validarFiltros() {
+      const inputDniCaja = document.getElementById("verificarDniInput").value.trim();
       const boletaTxt = document.getElementById("boletaInput").value.trim();
       const btnCanjear = document.getElementById("btnCanjear");
-      
+      const errorDniMsg = document.getElementById("errorDniMsg");
+      const badgeOk = document.getElementById("badgeOk");
+
+      errorDniMsg.innerText = "";
+      badgeOk.style.display = "none";
+
+      if (inputDniCaja.length < 3) {
+          btnCanjear.disabled = true;
+          btnCanjear.innerText = "Falta responder DNI";
+          return;
+      }
+
+      if (inputDniCaja !== ultimosDigitosDniCorrectos) {
+          errorDniMsg.innerText = "❌ Los dígitos no coinciden. ¡Alerta de fraude!";
+          btnCanjear.disabled = true;
+          btnCanjear.innerText = "DNI Incorrecto";
+          return;
+      }
+
+      badgeOk.style.display = "inline-block";
+
       if (boletaTxt.length > 0) {
           btnCanjear.disabled = false;
           btnCanjear.innerText = "Confirmar Canje";
       } else {
           btnCanjear.disabled = true;
           btnCanjear.innerText = "Ingrese Boleta";
-      }
+       }
   }
 
   async function canjearCodigo() {
@@ -171,7 +224,7 @@
               estado: 'canjeado', 
               fecha_canje: new Date().toISOString(),
               tienda_canje: tiendaActiva,
-              nro_boleta: boletaValor // Guardamos la boleta
+              nro_boleta: boletaValor
           })
           .eq('codigo', codigoActual);
 
@@ -182,6 +235,7 @@
           btnCanjear.innerText = "Confirmar Canje";
       } else {
           document.getElementById("estadoCodigo").innerHTML = "<span style='color:red;'>CANJEADO CON ÉXITO</span>";
+          document.getElementById("bloqueSeguridad").style.display = "none";
           document.getElementById("seccionBoleta").style.display = "none";
           btnCanjear.innerText = "¡Canjeado!";
       }
