@@ -34,7 +34,9 @@
 <script>
   // 1. CONFIGURACIÓN DE SUPABASE
   const SUPABASE_URL = "https://aollztxtygxarlueflxq.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_GGRFStJ8MPQJEao1VE9L5w_CLm2Yzc4";
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbGx6dHh0eWd4YXJsdWVmbHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMjU0NzMsImV4cCI6MjA5ODYwMTQ3M30.v3LIghE_kbpab9j2fVx_qmawKbbsTCX0ZxsoyeZRo-Q";
+
+   
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let codigoActual = "";
@@ -53,7 +55,7 @@
 
         if (!codigoActual) return;
 
-        // Consulta simplificada para evitar errores de nombres en llaves foráneas complejas
+        // Consulta directa y compatible para traer cupones y clientes
         const { data, error } = await _supabase
           .from('cupones')
           .select('estado, clientes(nombre)')
@@ -61,12 +63,12 @@
           .maybeSingle();
 
         if (error || !data) {
-            console.error("Error en la consulta de Supabase:", error);
+            console.error("Error en Supabase:", error);
             errorMsg.innerText = "❌ Código inválido o no existe.";
             return;
         }
 
-        // Leer los datos del cliente de forma segura buscando variantes de nombres
+        // Mapeo seguro del cliente
         const datosCliente = data.clientes || data['clientes!cupones_cliente_id_fkey'];
         document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "Cliente no asignado";
         
@@ -96,7 +98,7 @@
             .eq('codigo', codigoActual);
 
         if (error) {
-            console.error("Error al actualizar estado en Supabase:", error);
+            console.error("Error al canjear:", error);
             alert("Hubo un error al procesar el canje.");
             btnCanjear.disabled = false;
             btnCanjear.innerText = "Confirmar Canje";
