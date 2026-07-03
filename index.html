@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -54,22 +53,24 @@
 
         if (!codigoActual) return;
 
-        // Consulta a Supabase uniendo la tabla cupones con clientes
-       const { data, error } = await _supabase
-      .from('cupones')
-      .select('estado, clientes!cupones_cliente_id_fkey(nombre)')
-      .eq('codigo', codigoActual)
-      .maybeSingle();
+        // Consulta simplificada para evitar errores de nombres en llaves foráneas complejas
+        const { data, error } = await _supabase
+          .from('cupones')
+          .select('estado, clientes(nombre)')
+          .eq('codigo', codigoActual)
+          .maybeSingle();
 
         if (error || !data) {
+            console.error("Error en la consulta de Supabase:", error);
             errorMsg.innerText = "❌ Código inválido o no existe.";
             return;
         }
 
-        // Mostrar datos encontrados
-      const datosCliente = data['clientes!cupones_cliente_id_fkey'] || data.clientes;
-document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "Cliente no asignado";
-const txtEstado = document.getElementById("estadoCodigo");
+        // Leer los datos del cliente de forma segura buscando variantes de nombres
+        const datosCliente = data.clientes || data['clientes!cupones_cliente_id_fkey'];
+        document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "Cliente no asignado";
+        
+        const txtEstado = document.getElementById("estadoCodigo");
         seccionCliente.style.display = "block";
 
         if (data.estado === 'canjeado') {
@@ -83,10 +84,10 @@ const txtEstado = document.getElementById("estadoCodigo");
         }
     }
 
-    // 3. HACER EL CANJE Y BLOQUEAR EL BOTÓN
+    // 3. HACER EL CANJE
     async function canjearCodigo() {
         const btnCanjear = document.getElementById("btnCanjear");
-        btnCanjear.disabled = true; // Bloqueo inmediato en pantalla para evitar doble clic
+        btnCanjear.disabled = true; 
         btnCanjear.innerText = "Procesando...";
 
         const { error } = await _supabase
@@ -95,13 +96,13 @@ const txtEstado = document.getElementById("estadoCodigo");
             .eq('codigo', codigoActual);
 
         if (error) {
+            console.error("Error al actualizar estado en Supabase:", error);
             alert("Hubo un error al procesar el canje.");
             btnCanjear.disabled = false;
             btnCanjear.innerText = "Confirmar Canje";
         } else {
             document.getElementById("estadoCodigo").innerHTML = "<span style='color:red;'>CANJEADO CON ÉXITO</span>";
             btnCanjear.innerText = "¡Canjeado!";
-            // El botón se queda deshabilitado (disabled = true) permanentemente para esta búsqueda
         }
     }
 </script>
