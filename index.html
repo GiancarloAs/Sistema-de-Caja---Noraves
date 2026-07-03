@@ -148,12 +148,12 @@
 
       const datosCliente = data.clientes || data['clientes!cupones_cliente_id_fkey'];
       
-      // Renderizar datos menos el DNI (se mantiene privado para evitar que la cajera haga trampa)
+      // Mostrar info MENOS el DNI
       document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "No registrado";
       document.getElementById("telefonoCliente").innerText = datosCliente && datosCliente.telefono ? datosCliente.telefono : "No registrado";
       document.getElementById("empresaCliente").innerText = datosCliente && datosCliente.empresa ? datosCliente.empresa : "No registrado";
       
-      // Extraer los últimos 3 dígitos del DNI en segundo plano para la validación cruzada
+      // Capturar los 3 dígitos en segundo plano (en secreto)
       if (datosCliente && datosCliente.dni) {
           const dniLimpio = datosCliente.dni.toString().trim();
           ultimosDigitosDniCorrectos = dniLimpio.slice(-3);
@@ -187,14 +187,14 @@
       errorDniMsg.innerText = "";
       badgeOk.style.display = "none";
 
-      // 1. Validar que tenga los 3 dígitos puestos
+      // Filtro 1: El DNI debe tener 3 caracteres
       if (inputDniCaja.length < 3) {
           btnCanjear.disabled = true;
           btnCanjear.innerText = "Falta responder DNI";
           return;
       }
 
-      // 2. Verificar correspondencia exacta con el DNI interno
+      // Filtro 2: Los 3 dígitos deben coincidir de forma exacta
       if (inputDniCaja !== ultimosDigitosDniCorrectos) {
           errorDniMsg.innerText = "❌ Los dígitos no coinciden. ¡Alerta de fraude!";
           btnCanjear.disabled = true;
@@ -202,17 +202,19 @@
           return;
       }
 
-      // Si pasa el filtro de DNI, encendemos el sello visual interno
+      // Si el DNI es correcto, se activa el sello verde
       badgeOk.style.display = "inline-block";
 
-      // 3. Condición estricta de Boleta Obligatoria para liberar el botón final
-      if (boletaTxt.length > 0) {
-          btnCanjear.disabled = false;
-          btnCanjear.innerText = "Confirmar Canje";
-      } else {
+      // Filtro 3: Validar de manera obligatoria que exista la boleta contable
+      if (boletaTxt.length === 0) {
           btnCanjear.disabled = true;
           btnCanjear.innerText = "Ingrese Boleta (Obligatorio)";
+          return;
       }
+
+      // Si pasa todos los filtros, liberamos el botón final
+      btnCanjear.disabled = false;
+      btnCanjear.innerText = "Confirmar Canje";
   }
 
   async function canjearCodigo() {
