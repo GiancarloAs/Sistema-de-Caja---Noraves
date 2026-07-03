@@ -33,18 +33,12 @@
 </div>
 
 <script>
-      // 1. CONFIGURACIÓN DE SUPABASE (Aquí adentro va)
+  // 1. CONFIGURACIÓN DE SUPABASE
   const SUPABASE_URL = "https://aollztxtygxarlueflxq.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_GGRFStJ8MPQJEaolVE9L5w_CLm2Yzc4";
+  const SUPABASE_KEY = "sb_publishable_GGRFStJ8MPQJEao1VE9L5w_CLm2Yzc4";
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // ... El resto de las funciones que hacen buscar y canjear ...
-    
-    // 1. CONFIGURACIÓN DE SUPABASE (Cambia esto por tus datos)
-    const SUPABASE_URL = "TU_SUPABASE_URL_AQUÍ";
-    const SUPABASE_KEY = "TU_SUPABASE_ANON_KEY_AQUÍ";
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    let codigoActual = "";
+  let codigoActual = "";
 
     // 2. BUSCAR EL CÓDIGO
     async function buscarCodigo() {
