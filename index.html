@@ -1,3 +1,4 @@
+HTML
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -15,6 +16,7 @@
         .info-cliente { margin-top: 20px; padding: 15px; border-radius: 4px; background: #eef9f5; display: none; text-align: left; }
         .alerta { color: red; margin-top: 10px; font-weight: bold; }
         .tienda-tag { background: #24b47e; color: white; padding: 5px 10px; border-radius: 20px; font-size: 12px; float: right; font-weight: bold; }
+        .campo-boleta { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc; }
     </style>
 </head>
 <body>
@@ -46,6 +48,12 @@
     <div id="seccionCliente" class="info-cliente">
         <p><strong>Cliente:</strong> <span id="nombreCliente"></span></p>
         <p><strong>Estado:</strong> <span id="estadoCodigo"></span></p>
+        
+        <div id="seccionBoleta" class="campo-boleta" style="display: none;">
+            <label style="font-size: 14px; font-weight: bold; color: #333;">Número de Boleta emitida:</label>
+            <input type="text" id="boletaInput" placeholder="Ej: B001-0004321" oninput="validarFormulario()">
+        </div>
+
         <button id="btnCanjear" onclick="canjearCodigo()" disabled>Confirmar Canje</button>
     </div>
     
@@ -54,7 +62,7 @@
 
 <script>
   const SUPABASE_URL = "https://aollztxtygxarlueflxq.supabase.co";
-  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbGx6dHh0eWd4YXJsdWVmbHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMjU0NzMsImV4cCI6MjA5ODYwMTQ3M30.v3LIghE_kbpab9j2fVx_qmawKbbsTCX0ZxsoyeZRo-Q";
+  const SUPABASE_KEY = "eyJhGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbGx6dHh0eWd4YXJsdWVmbHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3M00wM2w0TnpzImV4cCI6MjQ0N0c2MjA5MTM0M30.v3Lighe_kbpab9j2fVx_qmawKbbsTCX0ZxsoyeZRo-Q";
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let codigoActual = "";
@@ -97,10 +105,13 @@
       
       const errorMsg = document.getElementById("errorMsg");
       const seccionCliente = document.getElementById("seccionCliente");
+      const seccionBoleta = document.getElementById("seccionBoleta");
       const btnCanjear = document.getElementById("btnCanjear");
       
       errorMsg.innerText = "";
       seccionCliente.style.display = "none";
+      seccionBoleta.style.display = "none";
+      document.getElementById("boletaInput").value = "";
 
       if (!codigoActual) return;
 
@@ -128,13 +139,30 @@
           btnCanjear.innerText = "No disponible";
       } else {
           txtEstado.innerHTML = "<span style='color:green;'>DISPONIBLE</span>";
+          seccionBoleta.style.display = "block"; // Mostrar input de boleta
+          btnCanjear.disabled = true; // Deshabilitado hasta que escriba la boleta
+          btnCanjear.innerText = "Ingrese Boleta";
+      }
+  }
+
+  // Valida en tiempo real que el campo boleta no esté vacío para activar el botón
+  function validarFormulario() {
+      const boletaTxt = document.getElementById("boletaInput").value.trim();
+      const btnCanjear = document.getElementById("btnCanjear");
+      
+      if (boletaTxt.length > 0) {
           btnCanjear.disabled = false;
           btnCanjear.innerText = "Confirmar Canje";
+      } else {
+          btnCanjear.disabled = true;
+          btnCanjear.innerText = "Ingrese Boleta";
       }
   }
 
   async function canjearCodigo() {
       const btnCanjear = document.getElementById("btnCanjear");
+      const boletaValor = document.getElementById("boletaInput").value.trim().toUpperCase();
+      
       btnCanjear.disabled = true; 
       btnCanjear.innerText = "Procesando...";
 
@@ -143,7 +171,8 @@
           .update({ 
               estado: 'canjeado', 
               fecha_canje: new Date().toISOString(),
-              tienda_canje: tiendaActiva 
+              tienda_canje: tiendaActiva,
+              nro_boleta: boletaValor // Guardamos la boleta
           })
           .eq('codigo', codigoActual);
 
@@ -154,6 +183,7 @@
           btnCanjear.innerText = "Confirmar Canje";
       } else {
           document.getElementById("estadoCodigo").innerHTML = "<span style='color:red;'>CANJEADO CON ÉXITO</span>";
+          document.getElementById("seccionBoleta").style.display = "none";
           btnCanjear.innerText = "¡Canjeado!";
       }
   }
