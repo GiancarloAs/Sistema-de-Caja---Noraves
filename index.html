@@ -6,19 +6,38 @@
     <title>Panel de Caja - Canjes</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: Arial, sans-serif; background: #f4f7f6; padding: 40px; display: flex; justify-content: center; }
+        body { font-family: Arial, sans-serif; background: #f4f7f6; padding: 40px; display: flex; justify-content: center; align-items: center; min-height: 80vh; }
         .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
-        input { width: 80%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 18px; text-align: center; text-transform: uppercase; }
-        button { width: 85%; padding: 12px; background: #24b47e; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        input, select { width: 85%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; text-align: center; }
+        input[type="text"] { text-transform: uppercase; }
+        button { width: 90%; padding: 12px; background: #24b47e; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold; margin-top: 10px; }
         button:disabled { background: #cccccc; cursor: not-allowed; }
         .info-cliente { margin-top: 20px; padding: 15px; border-radius: 4px; background: #eef9f5; display: none; text-align: left; }
         .alerta { color: red; margin-top: 10px; font-weight: bold; }
+        .tienda-tag { background: #24b47e; color: white; padding: 5px 10px; border-radius: 20px; font-size: 12px; float: right; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>Validación de Canje</h2>
+<div id="pantallaLogin" class="card">
+    <h2>Acceso de Caja</h2>
+    <p style="color: #666; font-size: 14px;">Selecciona tu sucursal e ingresa la contraseña</p>
+    
+    <select id="selectTienda">
+        <option value="Tienda Larco">Tienda Larco</option>
+        <option value="Tienda Ingeniería">Tienda Ingeniería</option>
+    </select>
+    
+    <input type="password" id="passTienda" placeholder="Contraseña de cajero">
+    <button onclick="loginTienda()">Ingresar al Panel</button>
+    <div id="errorLogin" class="alerta"></div>
+</div>
+
+<div id="pantallaCanje" class="card" style="display: none;">
+    <div>
+        <span id="tagTiendaActiva" class="tienda-tag"></span>
+        <h2 style="text-align: left; margin-top: 0;">Validación</h2>
+    </div>
     <input type="text" id="codigoInput" placeholder="Introduce el código">
     <button id="btnBuscar" onclick="buscarCodigo()">Buscar Código</button>
 
@@ -29,84 +48,121 @@
         <p><strong>Estado:</strong> <span id="estadoCodigo"></span></p>
         <button id="btnCanjear" onclick="canjearCodigo()" disabled>Confirmar Canje</button>
     </div>
+    
+    <p style="margin-top: 25px; font-size: 12px;"><a href="#" onclick="cerrarSesion()" style="color: #666;">Cerrar Sesión de Caja</a></p>
 </div>
 
 <script>
   // 1. CONFIGURACIÓN DE SUPABASE
   const SUPABASE_URL = "https://aollztxtygxarlueflxq.supabase.co";
-  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbGx6dHh0eWd4YXJsdWVmbHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMjU0NzMsImV4cCI6MjA5ODYwMTQ3M30.v3LIghE_kbpab9j2fVx_qmawKbbsTCX0ZxsoyeZRo-Q";
-
-   
+  const SUPABASE_KEY = "eyJhGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbGx6dHh0eWd4YXJsdWVmbHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3M00wM2w0TnpzImV4cCI6MjQ0N0c2MjA5MTM0M30.v3Lighe_kbpab9j2fVx_qmawKbbsTCX0ZxsoyeZRo-Q";
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let codigoActual = "";
+  let tiendaActiva = "";
 
-    // 2. BUSCAR EL CÓDIGO
-    async function buscarCodigo() {
-        const input = document.getElementById("codigoInput");
-        codigoActual = input.value.trim().toUpperCase();
-        
-        const errorMsg = document.getElementById("errorMsg");
-        const seccionCliente = document.getElementById("seccionCliente");
-        const btnCanjear = document.getElementById("btnCanjear");
-        
-        errorMsg.innerText = "";
-        seccionCliente.style.display = "none";
+  // 2. CONTROL DE ACCESO (LOGIN)
+  function loginTienda() {
+      const tienda = document.getElementById("selectTienda").value;
+      const pass = document.getElementById("passTienda").value;
+      const errorLogin = document.getElementById("errorLogin");
+      
+      errorLogin.innerText = "";
 
-        if (!codigoActual) return;
+      // Credenciales requeridas
+      if (tienda === "Tienda Larco" && pass === "tienlar01") {
+          tiendaActiva = "Tienda Larco";
+      } else if (tienda === "Tienda Ingeniería" && pass === "tieninge01") {
+          tiendaActiva = "Tienda Ingeniería";
+      } else {
+          errorLogin.innerText = "❌ Contraseña incorrecta.";
+          return;
+      }
 
-        // Consulta directa y compatible para traer cupones y clientes
-        const { data, error } = await _supabase
+      // Transición de pantallas
+      document.getElementById("tagTiendaActiva").innerText = tiendaActiva;
+      document.getElementById("pantallaLogin").style.display = "none";
+      document.getElementById("pantallaCanje").style.display = "top";
+      document.getElementById("pantallaCanje").style.display = "block";
+      document.getElementById("passTienda").value = ""; // Limpiar clave
+  }
+
+  function cerrarSesion() {
+      tiendaActiva = "";
+      document.getElementById("pantallaCanje").style.display = "none";
+      document.getElementById("pantallaLogin").style.display = "block";
+      document.getElementById("codigoInput").value = "";
+      document.getElementById("seccionCliente").style.display = "none";
+  }
+
+  // 3. BUSCAR EL CÓDIGO
+  async function buscarCodigo() {
+      const input = document.getElementById("codigoInput");
+      codigoActual = input.value.trim().toUpperCase();
+      
+      const errorMsg = document.getElementById("errorMsg");
+      const seccionCliente = document.getElementById("seccionCliente");
+      const btnCanjear = document.getElementById("btnCanjear");
+      
+      errorMsg.innerText = "";
+      seccionCliente.style.display = "none";
+
+      if (!codigoActual) return;
+
+      const { data, error } = await _supabase
+        .from('cupones')
+        .select('estado, clientes(nombre)')
+        .eq('codigo', codigoActual)
+        .maybeSingle();
+
+      if (error || !data) {
+          console.error("Error en Supabase:", error);
+          errorMsg.innerText = "❌ Código inválido o no existe.";
+          return;
+      }
+
+      const datosCliente = data.clientes || data['clientes!cupones_cliente_id_fkey'];
+      document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "Cliente no asignado";
+      
+      const txtEstado = document.getElementById("estadoCodigo");
+      seccionCliente.style.display = "block";
+
+      if (data.estado === 'canjeado') {
+          txtEstado.innerHTML = "<span style='color:red;'>YA CANJEADO</span>";
+          btnCanjear.disabled = true;
+          btnCanjear.innerText = "No disponible";
+      } else {
+          txtEstado.innerHTML = "<span style='color:green;'>DISPONIBLE</span>";
+          btnCanjear.disabled = false;
+          btnCanjear.innerText = "Confirmar Canje";
+      }
+  }
+
+  // 4. HACER EL CANJE GUARDANDO LA TIENDA RESPONSABLE
+  async function canjearCodigo() {
+      const btnCanjear = document.getElementById("btnCanjear");
+      btnCanjear.disabled = true; 
+      btnCanjear.innerText = "Procesando...";
+
+      const { error } = await _supabase
           .from('cupones')
-          .select('estado, clientes(nombre)')
-          .eq('codigo', codigoActual)
-          .maybeSingle();
+          .update({ 
+              estado: 'canjeado', 
+              fecha_canje: new Date().toISOString(),
+              tienda_canje: tiendaActiva // <--- Aquí inyectamos de qué tienda proviene el proceso
+          })
+          .eq('codigo', codigoActual);
 
-        if (error || !data) {
-            console.error("Error en Supabase:", error);
-            errorMsg.innerText = "❌ Código inválido o no existe.";
-            return;
-        }
-
-        // Mapeo seguro del cliente
-        const datosCliente = data.clientes || data['clientes!cupones_cliente_id_fkey'];
-        document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "Cliente no asignado";
-        
-        const txtEstado = document.getElementById("estadoCodigo");
-        seccionCliente.style.display = "block";
-
-        if (data.estado === 'canjeado') {
-            txtEstado.innerHTML = "<span style='color:red;'>YA CANJEADO</span>";
-            btnCanjear.disabled = true;
-            btnCanjear.innerText = "No disponible";
-        } else {
-            txtEstado.innerHTML = "<span style='color:green;'>DISPONIBLE</span>";
-            btnCanjear.disabled = false;
-            btnCanjear.innerText = "Confirmar Canje";
-        }
-    }
-
-    // 3. HACER EL CANJE
-    async function canjearCodigo() {
-        const btnCanjear = document.getElementById("btnCanjear");
-        btnCanjear.disabled = true; 
-        btnCanjear.innerText = "Procesando...";
-
-        const { error } = await _supabase
-            .from('cupones')
-            .update({ estado: 'canjeado', fecha_canje: new Date().toISOString() })
-            .eq('codigo', codigoActual);
-
-        if (error) {
-            console.error("Error al canjear:", error);
-            alert("Hubo un error al procesar el canje.");
-            btnCanjear.disabled = false;
-            btnCanjear.innerText = "Confirmar Canje";
-        } else {
-            document.getElementById("estadoCodigo").innerHTML = "<span style='color:red;'>CANJEADO CON ÉXITO</span>";
-            btnCanjear.innerText = "¡Canjeado!";
-        }
-    }
+      if (error) {
+          console.error("Error al canjear:", error);
+          alert("Hubo un error al procesar el canje.");
+          btnCanjear.disabled = false;
+          btnCanjear.innerText = "Confirmar Canje";
+      } else {
+          document.getElementById("estadoCodigo").innerHTML = "<span style='color:red;'>CANJEADO CON ÉXITO</span>";
+          btnCanjear.innerText = "¡Canjeado!";
+      }
+  }
 </script>
 </body>
 </html>
