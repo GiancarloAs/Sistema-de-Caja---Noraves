@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -24,12 +25,7 @@
 
 <div id="pantallaLogin" class="card">
     <h2>Acceso de Caja</h2>
-    <p style="color: #666; font-size: 14px;">Selecciona tu sucursal e ingresa la contraseña</p>
-    
-    <select id="selectTienda">
-        <option value="Tienda Larco">Tienda Larco</option>
-        <option value="Tienda Ingeniería">Tienda Ingeniería</option>
-    </select>
+    <p style="color: #666; font-size: 14px;">Ingresa la contraseña para Tienda Larco</p>
     
     <input type="password" id="passTienda" placeholder="Contraseña de cajero">
     <button onclick="loginTienda()">Ingresar al Panel</button>
@@ -78,33 +74,27 @@
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let codigoActual = "";
-  let tiendaActiva = "";
+  let tiendaActiva = "Tienda Larco";
   let ultimosDigitosDniCorrectos = "";
 
   function loginTienda() {
-      const tienda = document.getElementById("selectTienda").value;
       const pass = document.getElementById("passTienda").value;
       const errorLogin = document.getElementById("errorLogin");
       
       errorLogin.innerText = "";
 
-      if (tienda === "Tienda Larco" && pass === "tienlar01") {
-          tiendaActiva = "Tienda Larco";
-      } else if (tienda === "Tienda Ingeniería" && pass === "tieninge01") {
-          tiendaActiva = "Tienda Ingeniería";
+      // Solo valida la contraseña de Tienda Larco
+      if (pass === "tienlar01") {
+          document.getElementById("tagTiendaActiva").innerText = tiendaActiva;
+          document.getElementById("pantallaLogin").style.display = "none";
+          document.getElementById("pantallaCanje").style.display = "block";
+          document.getElementById("passTienda").value = ""; 
       } else {
           errorLogin.innerText = "❌ Contraseña incorrecta.";
-          return;
       }
-
-      document.getElementById("tagTiendaActiva").innerText = tiendaActiva;
-      document.getElementById("pantallaLogin").style.display = "none";
-      document.getElementById("pantallaCanje").style.display = "block";
-      document.getElementById("passTienda").value = ""; 
   }
 
   function cerrarSesion() {
-      tiendaActiva = "";
       document.getElementById("pantallaCanje").style.display = "none";
       document.getElementById("pantallaLogin").style.display = "block";
       document.getElementById("codigoInput").value = "";
@@ -112,6 +102,7 @@
       document.getElementById("errorMsg").innerText = "";
   }
 
+  // ... (El resto de las funciones buscarCodigo, validarFiltros y canjearCodigo permanecen iguales)
   async function buscarCodigo() {
       const input = document.getElementById("codigoInput");
       codigoActual = input.value.trim().toUpperCase();
@@ -141,35 +132,29 @@
         .maybeSingle();
 
       if (error || !data) {
-          console.error("Error detectado:", error);
           errorMsg.innerText = "❌ Código inválido o no existe.";
           return;
       }
 
       const datosCliente = data.clientes || data['clientes!cupones_cliente_id_fkey'];
       
-      // Mostrar info MENOS el DNI
       document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "No registrado";
       document.getElementById("telefonoCliente").innerText = datosCliente && datosCliente.telefono ? datosCliente.telefono : "No registrado";
       document.getElementById("empresaCliente").innerText = datosCliente && datosCliente.empresa ? datosCliente.empresa : "No registrado";
       
-      // Capturar los 3 dígitos en segundo plano (en secreto)
       if (datosCliente && datosCliente.dni) {
-          const dniLimpio = datosCliente.dni.toString().trim();
-          ultimosDigitosDniCorrectos = dniLimpio.slice(-3);
+          ultimosDigitosDniCorrectos = datosCliente.dni.toString().trim().slice(-3);
       } else {
           ultimosDigitosDniCorrectos = "000"; 
       }
 
-      const txtEstado = document.getElementById("estadoCodigo");
       seccionCliente.style.display = "block";
-
       if (data.estado === 'canjeado') {
-          txtEstado.innerHTML = "<span style='color:red;'>YA CANJEADO</span>";
+          document.getElementById("estadoCodigo").innerHTML = "<span style='color:red;'>YA CANJEADO</span>";
           btnCanjear.disabled = true;
           btnCanjear.innerText = "No disponible";
       } else {
-          txtEstado.innerHTML = "<span style='color:green;'>DISPONIBLE</span>";
+          document.getElementById("estadoCodigo").innerHTML = "<span style='color:green;'>DISPONIBLE</span>";
           bloqueSeguridad.style.display = "block";
           seccionBoleta.style.display = "block";
           btnCanjear.disabled = true; 
@@ -187,32 +172,26 @@
       errorDniMsg.innerText = "";
       badgeOk.style.display = "none";
 
-      // Filtro 1: El DNI debe tener 3 caracteres
       if (inputDniCaja.length < 3) {
           btnCanjear.disabled = true;
           btnCanjear.innerText = "Falta responder DNI";
           return;
       }
 
-      // Filtro 2: Los 3 dígitos deben coincidir de forma exacta
       if (inputDniCaja !== ultimosDigitosDniCorrectos) {
-          errorDniMsg.innerText = "❌ Los dígitos no coinciden. ¡Alerta de fraude!";
+          errorDniMsg.innerText = "❌ Los dígitos no coinciden.";
           btnCanjear.disabled = true;
           btnCanjear.innerText = "DNI Incorrecto";
           return;
       }
 
-      // Si el DNI es correcto, se activa el sello verde
       badgeOk.style.display = "inline-block";
-
-      // Filtro 3: Validar de manera obligatoria que exista la boleta contable
       if (boletaTxt.length === 0) {
           btnCanjear.disabled = true;
           btnCanjear.innerText = "Ingrese Boleta (Obligatorio)";
           return;
       }
 
-      // Si pasa todos los filtros, liberamos el botón final
       btnCanjear.disabled = false;
       btnCanjear.innerText = "Confirmar Canje";
   }
@@ -235,7 +214,6 @@
           .eq('codigo', codigoActual);
 
       if (error) {
-          console.error("Error en Update:", error);
           alert("Hubo un error al procesar el canje.");
           btnCanjear.disabled = false;
           btnCanjear.innerText = "Confirmar Canje";
