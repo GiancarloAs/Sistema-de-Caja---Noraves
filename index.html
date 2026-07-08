@@ -18,18 +18,17 @@
         .seccion-seguridad { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #24b47e; background: #fff3cd; padding: 10px; border-radius: 4px; }
         .campo-boleta { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc; }
         .badge-verificado { color: #155724; background-color: #d4edda; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; float: right; display: none; }
+        .contenedor-botones { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 15px; }
+        .contenedor-botones button { width: 48%; flex: 1; min-width: 120px; }
+        .btn-secundario { background: #6c757d; }
+        .btn-secundario:hover:not(:disabled) { background: #5a6268; }
     </style>
 </head>
 <body>
 
 <div id="pantallaLogin" class="card">
     <h2>Acceso de Caja</h2>
-    <p style="color: #666; font-size: 14px;">Selecciona tu sucursal e ingresa la contraseña</p>
-
-    <select id="selectTienda">
-        <option value="Tienda Larco">Tienda Larco</option>
-        <option value="Tienda Ingeniería">Tienda Ingeniería</option>
-    </select>
+    <p style="color: #666; font-size: 14px;">Ingresa la contraseña de Tienda Larco</p>
 
     <input type="password" id="passTienda" placeholder="Contraseña de cajero">
     <button onclick="loginTienda()">Ingresar al Panel</button>
@@ -49,7 +48,6 @@
     <div id="seccionCliente" class="info-cliente">
         <span id="badgeOk" class="badge-verificado">✓ IDENTIDAD CONFIRMADA</span>
         <p><strong>Cliente:</strong> <span id="nombreCliente"></span></p>
-        <p><strong>Teléfono:</strong> <span id="telefonoCliente"></span></p>
         <p><strong>Empresa:</strong> <span id="empresaCliente"></span></p>
         <p><strong>Estado del Cupón:</strong> <span id="estadoCodigo"></span></p>
 
@@ -66,15 +64,25 @@
             <input type="text" id="boletaInput" placeholder="Ej: B001-0004321" oninput="validarFiltros()">
         </div>
 
-        <button id="btnCanjear" onclick="canjearCodigo()" disabled>Complete los filtros</button>
+        <div id="seccionBotones" style="display: none; margin-top: 20px;">
+            <button id="btnCanjear" onclick="canjearCodigo()" disabled>Complete los filtros</button>
+        </div>
+
+        <div id="seccionExito" style="display: none; text-align: center; margin-top: 15px;">
+            <p style="color: green; font-size: 16px; font-weight: bold;">✓ ¡Cupón canjeado con éxito!</p>
+            <div class="contenedor-botones">
+                <button onclick="canjearOtroCupon()" class="btn-secundario">Canjear Otro Cupón</button>
+                <button onclick="cerrarSesion()">Cerrar Sesión</button>
+            </div>
+        </div>
     </div>
 
-    <p style="margin-top: 25px; font-size: 12px;"><a href="#" onclick="cerrarSesion()" style="color: #666;">Cerrar Sesión de Caja</a></p>
+    <p id="linkCerrarSesion" style="margin-top: 25px; font-size: 12px;"><a href="#" onclick="cerrarSesion()" style="color: #666;">Cerrar Sesión de Caja</a></p>
 </div>
 
 <script>
   const SUPABASE_URL = "https://aollztxtygxarlueflxq.supabase.co";
-  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbGx6dHh0eWd4YXJsdWVmbHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMjU0NzMsImV4cCI6MjA5ODYwMTQ3M30.v3LIghE_kbpab9j2fVx_qmawKbbsTCX0ZxsoyeZRo-Q";
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbGx6dHh0eWd4YXJsdWVmbHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMjU0NzMsImV4cCI6MjA5ODYwMTQ3M30.v3LIghE_kbp[...]
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let codigoActual = "";
@@ -82,16 +90,13 @@
   let ultimosDigitosDniCorrectos = "";
 
   function loginTienda() {
-      const tienda = document.getElementById("selectTienda").value;
       const pass = document.getElementById("passTienda").value;
       const errorLogin = document.getElementById("errorLogin");
 
       errorLogin.innerText = "";
 
-      if (tienda === "Tienda Larco" && pass === "tienlar01") {
+      if (pass === "tienlar01") {
           tiendaActiva = "Tienda Larco";
-      } else if (tienda === "Tienda Ingeniería" && pass === "tieninge01") {
-          tiendaActiva = "Tienda Ingeniería";
       } else {
           errorLogin.innerText = "❌ Contraseña incorrecta.";
           return;
@@ -110,56 +115,114 @@
       document.getElementById("codigoInput").value = "";
       document.getElementById("seccionCliente").style.display = "none";
       document.getElementById("errorMsg").innerText = "";
+      document.getElementById("linkCerrarSesion").style.display = "block";
+  }
+
+  function canjearOtroCupon() {
+      document.getElementById("codigoInput").value = "";
+      document.getElementById("seccionCliente").style.display = "none";
+      document.getElementById("bloqueSeguridad").style.display = "none";
+      document.getElementById("seccionBoleta").style.display = "none";
+      document.getElementById("seccionBotones").style.display = "none";
+      document.getElementById("seccionExito").style.display = "none";
+      document.getElementById("badgeOk").style.display = "none";
+      document.getElementById("verificarDniInput").value = "";
+      document.getElementById("boletaInput").value = "";
+      document.getElementById("errorMsg").innerText = "";
+      document.getElementById("linkCerrarSesion").style.display = "block";
+      document.getElementById("codigoInput").focus();
   }
 
   async function buscarCodigo() {
-codigoActual=document.getElementById("codigoInput").value.trim().toUpperCase();
-if(!codigoActual)return;
-const errorMsg=document.getElementById("errorMsg");
-errorMsg.innerText="";
-document.getElementById("seccionCliente").style.display="none";
-document.getElementById("bloqueSeguridad").style.display="none";
-document.getElementById("seccionBoleta").style.display="none";
-document.getElementById("badgeOk").style.display="none";
-document.getElementById("verificarDniInput").value="";
-document.getElementById("boletaInput").value="";
-const {data:cupon,error:errorCupon}=await _supabase.from("cupones").select("*").eq("codigo",codigoActual).maybeSingle();
-if(errorCupon||!cupon){console.error(errorCupon);errorMsg.innerText="❌ Código inválido o no existe.";return;}
-const {data:cliente}=await _supabase.from("clientes").select("*").eq("id",cupon.cliente_id).maybeSingle();
-document.getElementById("nombreCliente").innerText=cliente?.nombre||"No registrado";
-document.getElementById("telefonoCliente").innerText=cliente?.telefono||"No registrado";
-document.getElementById("empresaCliente").innerText=cliente?.empresa||"No registrado";
-ultimosDigitosDniCorrectos=cliente?.dni?cliente.dni.toString().slice(-3):"";
-document.getElementById("seccionCliente").style.display="block";
-const txtEstado=document.getElementById("estadoCodigo");
-if(cupon.estado==="canjeado"){txtEstado.innerHTML="<span style='color:red;'>YA CANJEADO</span>";btnCanjear.disabled=true;btnCanjear.innerText="No disponible";}
-else{txtEstado.innerHTML="<span style='color:green;'>DISPONIBLE</span>";document.getElementById("bloqueSeguridad").style.display="block";document.getElementById("seccionBoleta").style.display="block";btnCanjear.disabled=true;btnCanjear.innerText="Complete los filtros";}
-}
-function validarFiltros() {
+      codigoActual = document.getElementById("codigoInput").value.trim().toUpperCase();
+      if (!codigoActual) return;
+      
+      const errorMsg = document.getElementById("errorMsg");
+      errorMsg.innerText = "";
+      document.getElementById("seccionCliente").style.display = "none";
+      document.getElementById("bloqueSeguridad").style.display = "none";
+      document.getElementById("seccionBoleta").style.display = "none";
+      document.getElementById("seccionBotones").style.display = "none";
+      document.getElementById("seccionExito").style.display = "none";
+      document.getElementById("badgeOk").style.display = "none";
+      document.getElementById("verificarDniInput").value = "";
+      document.getElementById("boletaInput").value = "";
+
+      const { data: cupon, error: errorCupon } = await _supabase
+          .from("cupones")
+          .select("*")
+          .eq("codigo", codigoActual)
+          .maybeSingle();
+
+      if (errorCupon || !cupon) {
+          console.error(errorCupon);
+          errorMsg.innerText = "❌ Código inválido o no existe.";
+          return;
+      }
+
+      const { data: cliente } = await _supabase
+          .from("clientes")
+          .select("*")
+          .eq("id", cupon.cliente_id)
+          .maybeSingle();
+
+      document.getElementById("nombreCliente").innerText = cliente?.nombre || "No registrado";
+      document.getElementById("empresaCliente").innerText = cliente?.empresa || "No registrado";
+      ultimosDigitosDniCorrectos = cliente?.dni ? cliente.dni.toString().slice(-3) : "";
+
+      document.getElementById("seccionCliente").style.display = "block";
+      document.getElementById("linkCerrarSesion").style.display = "none";
+
+      const txtEstado = document.getElementById("estadoCodigo");
+      const btnCanjear = document.getElementById("btnCanjear");
+
+      if (cupon.estado === "canjeado") {
+          txtEstado.innerHTML = "<span style='color:red;'>YA CANJEADO</span>";
+          btnCanjear.disabled = true;
+          btnCanjear.innerText = "No disponible";
+          document.getElementById("bloqueSeguridad").style.display = "none";
+          document.getElementById("seccionBoleta").style.display = "none";
+          document.getElementById("seccionBotones").style.display = "none";
+      } else {
+          txtEstado.innerHTML = "<span style='color:green;'>DISPONIBLE</span>";
+          document.getElementById("bloqueSeguridad").style.display = "block";
+          document.getElementById("seccionBoleta").style.display = "block";
+          document.getElementById("seccionBotones").style.display = "block";
+          validarFiltros();
+      }
+  }
+
+  function validarFiltros() {
       const inputDniCaja = document.getElementById("verificarDniInput").value.trim();
       const boletaTxt = document.getElementById("boletaInput").value.trim();
       const btnCanjear = document.getElementById("btnCanjear");
       const errorDniMsg = document.getElementById("errorDniMsg");
       const badgeOk = document.getElementById("badgeOk");
+
       errorDniMsg.innerText = "";
       badgeOk.style.display = "none";
+
       if (inputDniCaja.length < 3) {
           btnCanjear.disabled = true;
           btnCanjear.innerText = "Falta responder DNI";
           return;
       }
+
       if (inputDniCaja !== ultimosDigitosDniCorrectos) {
           errorDniMsg.innerText = "❌ Los dígitos no coinciden. ¡Alerta de fraude!";
           btnCanjear.disabled = true;
           btnCanjear.innerText = "DNI Incorrecto";
           return;
       }
+
       badgeOk.style.display = "inline-block";
+
       if (boletaTxt.length === 0) {
           btnCanjear.disabled = true;
           btnCanjear.innerText = "Ingrese Boleta (Obligatorio)";
           return;
       }
+
       btnCanjear.disabled = false;
       btnCanjear.innerText = "Confirmar Canje";
   }
@@ -168,7 +231,7 @@ function validarFiltros() {
       const btnCanjear = document.getElementById("btnCanjear");
       const boletaValor = document.getElementById("boletaInput").value.trim().toUpperCase();
 
-      btnCanjear.disabled = true; 
+      btnCanjear.disabled = true;
       btnCanjear.innerText = "Procesando...";
 
       const { error } = await _supabase
@@ -187,10 +250,11 @@ function validarFiltros() {
           btnCanjear.disabled = false;
           btnCanjear.innerText = "Confirmar Canje";
       } else {
-          document.getElementById("estadoCodigo").innerHTML = "<span style='color:red;'>CANJEADO CON ÉXITO</span>";
           document.getElementById("bloqueSeguridad").style.display = "none";
           document.getElementById("seccionBoleta").style.display = "none";
-          btnCanjear.innerText = "¡Canjeado!";
+          document.getElementById("seccionBotones").style.display = "none";
+          document.getElementById("seccionExito").style.display = "block";
+          document.getElementById("estadoCodigo").innerHTML = "<span style='color:green;'>CANJEADO CON ÉXITO</span>";
       }
   }
 </script>
