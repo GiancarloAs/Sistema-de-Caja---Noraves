@@ -7,126 +7,80 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: Arial, sans-serif; background: #f4f7f6; padding: 40px; display: flex; justify-content: center; align-items: center; min-height: 80vh; }
-        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 420px; text-align: center; position: relative; }
-        input, select { width: 85%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; text-align: center; }
+        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 420px; text-align: center; }
+        input { width: 85%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; text-align: center; }
         input[type="text"] { text-transform: uppercase; }
         button { width: 90%; padding: 12px; background: #24b47e; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold; margin-top: 10px; }
         button:disabled { background: #cccccc; cursor: not-allowed; }
         .info-cliente { margin-top: 20px; padding: 15px; border-radius: 4px; background: #eef9f5; display: none; text-align: left; }
-        .alerta { color: red; margin-top: 10px; font-weight: bold; text-align: center; }
+        .alerta { color: red; margin-top: 10px; font-weight: bold; }
         .tienda-tag { background: #24b47e; color: white; padding: 5px 10px; border-radius: 20px; font-size: 12px; float: right; font-weight: bold; }
-        .seccion-seguridad { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #24b47e; background: #fff3cd; padding: 10px; border-radius: 4px; }
-        .campo-boleta { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc; }
-        .badge-verificado { color: #155724; background-color: #d4edda; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; float: right; display: none; }
     </style>
 </head>
 <body>
 
 <div id="pantallaLogin" class="card">
-    <h2>Acceso de Caja</h2>
-    <select id="selectTienda">
-        <option value="Tienda Larco">Tienda Larco</option>
-        <option value="Tienda Ingeniería">Tienda Ingeniería</option>
-    </select>
+    <h2>Acceso: Tienda Larco</h2>
     <input type="password" id="passTienda" placeholder="Contraseña de cajero">
-    <button onclick="loginTienda()">Ingresar al Panel</button>
+    <button onclick="loginTienda()">Ingresar</button>
     <div id="errorLogin" class="alerta"></div>
 </div>
 
 <div id="pantallaCanje" class="card" style="display: none;">
     <div>
-        <span id="tagTiendaActiva" class="tienda-tag"></span>
+        <span class="tienda-tag">Tienda Larco</span>
         <h2 style="text-align: left; margin-top: 0;">Validación</h2>
     </div>
     <input type="text" id="codigoInput" placeholder="Introduce el código">
     <button id="btnBuscar" onclick="buscarCodigo()">Buscar Código</button>
-
     <div id="errorMsg" class="alerta"></div>
 
     <div id="seccionCliente" class="info-cliente">
-        <span id="badgeOk" class="badge-verificado">✓ IDENTIDAD CONFIRMADA</span>
         <p><strong>Cliente:</strong> <span id="nombreCliente"></span></p>
         <p><strong>Empresa:</strong> <span id="empresaCliente"></span></p>
-        <p><strong>Estado del Cupón:</strong> <span id="estadoCodigo"></span></p>
-
-        <div id="bloqueSeguridad" class="seccion-seguridad" style="display: none;">
-            <label style="font-size: 13px; font-weight: bold; color: #856404; display: block; margin-bottom: 5px;">
-                ⚠️ FILTRO: Ingrese últimos 3 dígitos del DNI:
-            </label>
-            <input type="text" id="verificarDniInput" maxlength="3" placeholder="Ej: 432" style="width: 50%; padding: 8px; font-size: 18px; letter-spacing: 3px;" oninput="validarFiltros()">
-            <div id="errorDniMsg" style="color: red; font-size: 12px; margin-top: 5px; font-weight: bold;"></div>
-        </div>
-
-        <div id="seccionBoleta" class="campo-boleta" style="display: none;">
-            <label style="font-size: 14px; font-weight: bold; color: #333;">Nro. Boleta (Obligatorio):</label>
-            <input type="text" id="boletaInput" placeholder="Ej: B001-0004321" oninput="validarFiltros()">
-        </div>
-
-        <button id="btnCanjear" onclick="canjearCodigo()" disabled>Complete los filtros</button>
+        <p><strong>Estado:</strong> <span id="estadoCodigo"></span></p>
+        <button id="btnCanjear" onclick="canjearCodigo()">Procesar Canje</button>
     </div>
-
-    <p style="margin-top: 25px; font-size: 12px;"><a href="#" onclick="cerrarSesion()" style="color: #666;">Cerrar Sesión</a></p>
+    <p style="margin-top: 25px;"><a href="#" onclick="location.reload()">Cerrar Sesión</a></p>
 </div>
 
 <script>
-  const SUPABASE_URL = "TU_URL_AQUI";
-  const SUPABASE_KEY = "TU_KEY_AQUI";
-  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-  let codigoActual = "";
-  let tiendaActiva = "";
-  let ultimosDigitosDniCorrectos = "";
+  const _supabase = supabase.createClient("TU_URL_AQUI", "TU_KEY_AQUI");
 
   function loginTienda() {
-      const tienda = document.getElementById("selectTienda").value;
       const pass = document.getElementById("passTienda").value;
-      const errorLogin = document.getElementById("errorLogin");
-
-      if ((tienda === "Tienda Larco" && pass === "tienlar01") || 
-          (tienda === "Tienda Ingeniería" && pass === "tieninge01")) {
-          tiendaActiva = tienda;
-          document.getElementById("tagTiendaActiva").innerText = tiendaActiva;
+      // Solo contraseña para Tienda Larco
+      if (pass === "tienlar01") {
           document.getElementById("pantallaLogin").style.display = "none";
           document.getElementById("pantallaCanje").style.display = "block";
-          document.getElementById("passTienda").value = ""; 
       } else {
-          errorLogin.innerText = "❌ Credenciales incorrectas.";
+          document.getElementById("errorLogin").innerText = "❌ Contraseña incorrecta.";
       }
-  }
-
-  function cerrarSesion() {
-      location.reload(); 
   }
 
   async function buscarCodigo() {
-      const input = document.getElementById("codigoInput");
-      codigoActual = input.value.trim().toUpperCase();
-      
-      // Lógica de búsqueda simplificada
+      const codigo = document.getElementById("codigoInput").value.trim().toUpperCase();
       const { data, error } = await _supabase
           .from('cupones')
-          .select('estado, clientes(nombre, dni, empresa)')
-          .eq('codigo', codigoActual)
+          .select('estado, nombre_cliente, empresa') // Ajusta estos nombres a los de tu tabla
+          .eq('codigo', codigo)
           .maybeSingle();
 
       if (error || !data) {
-          document.getElementById("errorMsg").innerText = "❌ Código inválido.";
+          document.getElementById("errorMsg").innerText = "❌ Código no encontrado.";
           return;
       }
 
-      const datosCliente = data.clientes;
-      document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "No registrado";
-      document.getElementById("empresaCliente").innerText = datosCliente ? datosCliente.empresa : "No registrado";
-      
-      ultimosDigitosDniCorrectos = datosCliente && datosCliente.dni ? datosCliente.dni.toString().slice(-3) : "000";
-      
+      document.getElementById("nombreCliente").innerText = data.nombre_cliente || "N/A";
+      document.getElementById("empresaCliente").innerText = data.empresa || "N/A";
+      document.getElementById("estadoCodigo").innerText = data.estado;
       document.getElementById("seccionCliente").style.display = "block";
-      // ... resto de lógica de mostrar botones según estado
+      document.getElementById("errorMsg").innerText = "";
   }
 
-  function validarFiltros() { /* Tu lógica de validación actual */ }
-
-  async function canjearCodigo() { /* Tu lógica de update a Supabase */ }
+  async function canjearCodigo() {
+      alert("Lógica de actualización pendiente");
+  }
 </script>
 </body>
 </html>
