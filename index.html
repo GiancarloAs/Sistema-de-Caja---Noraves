@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Caja - Canjes Ultraseguros</title>
-    <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0"></script>
     <style>
         body { font-family: Arial, sans-serif; background: #f4f7f6; padding: 40px; display: flex; justify-content: center; align-items: center; min-height: 80vh; }
         .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 420px; text-align: center; position: relative; }
@@ -80,14 +80,25 @@
     <p id="linkCerrarSesion" style="margin-top: 25px; font-size: 12px;"><a href="#" onclick="cerrarSesion()" style="color: #666;">Cerrar Sesión de Caja</a></p>
 </div>
 
-<script defer>
+<script>
   const SUPABASE_URL = "https://aollztxtygxarlueflxq.supabase.co";
-  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbGx6dHh0eWd4YXJsdWVmbHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMjU0NzMsImV4cCI6MjA5ODYwMTQ3M30.v3LIghE_kbpab9j2fVx_qmawKbbsTCX0ZxsoyeZRo-Q";
-  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbGx6dHh0eWd4YXJsdWVmbHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMjU0NzMsImV4cCI6MjA5ODYwMTQ3M30.v3LIghE_kbp[...]";
+  
+  let _supabase;
   let codigoActual = "";
   let tiendaActiva = "";
   let ultimosDigitosDniCorrectos = "";
+
+  // Inicializar Supabase cuando el DOM esté listo
+  document.addEventListener('DOMContentLoaded', function() {
+      if (typeof supabase !== 'undefined') {
+          _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+          console.log("✓ Supabase inicializado correctamente");
+      } else {
+          console.error("❌ Error: Supabase no se cargó");
+          document.getElementById("errorLogin").innerText = "❌ Error de conexión. Recarga la página.";
+      }
+  });
 
   function loginTienda() {
       const pass = document.getElementById("passTienda").value;
@@ -134,6 +145,11 @@
   }
 
   async function buscarCodigo() {
+      if (!_supabase) {
+          document.getElementById("errorMsg").innerText = "❌ Error de conexión a la base de datos.";
+          return;
+      }
+
       codigoActual = document.getElementById("codigoInput").value.trim().toUpperCase();
       if (!codigoActual) return;
       
