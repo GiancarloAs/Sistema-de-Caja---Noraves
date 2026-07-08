@@ -22,7 +22,6 @@
         .contenedor-botones button { width: 48%; flex: 1; min-width: 120px; }
         .btn-secundario { background: #6c757d; }
         .btn-secundario:hover:not(:disabled) { background: #5a6268; }
-        .debug-box { background: #f0f0f0; padding: 10px; border-radius: 4px; font-size: 12px; color: #333; margin-top: 10px; max-height: 150px; overflow-y: auto; display: block; border: 1px solid #ccc; }
     </style>
 </head>
 <body>
@@ -45,10 +44,6 @@
     <button id="btnBuscar" onclick="buscarCodigo()">Buscar Código</button>
 
     <div id="errorMsg" class="alerta"></div>
-    <div id="debugBox" class="debug-box">
-        <strong>📋 LOGS DE DEBUG:</strong><br>
-        <div id="debugContent"></div>
-    </div>
 
     <div id="seccionCliente" class="info-cliente">
         <span id="badgeOk" class="badge-verificado">✓ IDENTIDAD CONFIRMADA</span>
@@ -87,27 +82,20 @@
 
 <script>
   const SUPABASE_URL = "https://aollztxtygxarlueflxq.supabase.co";
-  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbGx6dHh0eWd4YXJsdWVmbHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMjU0NzMsImV4cCI6MjA5ODYwMTQ3M30.v3LIghE_kbpab9j2fVx_qmawKbbsTCX0ZxsoyeZRo-Q"
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbGx6dHh0eWd4YXJsdWVmbHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMjU0NzMsImV4cCI6MjA5ODYwMTQ3M30.v3LIghE_kbpab9j2fVx_qmawKbbsTCX0ZxsoyeZRo-Q";
   
   let _supabase;
   let codigoActual = "";
   let tiendaActiva = "";
   let ultimosDigitosDniCorrectos = "";
 
-  function addDebug(msg) {
-      const debugContent = document.getElementById("debugContent");
-      debugContent.innerHTML += msg + "<br>";
-      debugContent.scrollTop = debugContent.scrollHeight;
-      console.log(msg);
-  }
-
   // Inicializar Supabase cuando el DOM esté listo
   document.addEventListener('DOMContentLoaded', function() {
       if (typeof supabase !== 'undefined') {
           _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-          addDebug("✓ Supabase inicializado correctamente");
+          console.log("✓ Supabase inicializado correctamente");
       } else {
-          addDebug("❌ Error: Supabase no se cargó");
+          console.error("❌ Error: Supabase no se cargó");
           document.getElementById("errorLogin").innerText = "❌ Error de conexión. Recarga la página.";
       }
   });
@@ -129,8 +117,6 @@
       document.getElementById("pantallaLogin").style.display = "none";
       document.getElementById("pantallaCanje").style.display = "block";
       document.getElementById("passTienda").value = ""; 
-      document.getElementById("debugContent").innerHTML = "";
-      addDebug("✓ Sesión iniciada como: " + tiendaActiva);
   }
 
   function cerrarSesion() {
@@ -140,7 +126,6 @@
       document.getElementById("codigoInput").value = "";
       document.getElementById("seccionCliente").style.display = "none";
       document.getElementById("errorMsg").innerText = "";
-      document.getElementById("debugContent").innerHTML = "";
       document.getElementById("linkCerrarSesion").style.display = "block";
   }
 
@@ -155,7 +140,6 @@
       document.getElementById("verificarDniInput").value = "";
       document.getElementById("boletaInput").value = "";
       document.getElementById("errorMsg").innerText = "";
-      document.getElementById("debugContent").innerHTML = "";
       document.getElementById("linkCerrarSesion").style.display = "block";
       document.getElementById("codigoInput").focus();
   }
@@ -163,14 +147,11 @@
   async function buscarCodigo() {
       if (!_supabase) {
           document.getElementById("errorMsg").innerText = "❌ Error de conexión a la base de datos.";
-          addDebug("❌ Supabase no está inicializado");
           return;
       }
 
       codigoActual = document.getElementById("codigoInput").value.trim().toUpperCase();
       if (!codigoActual) return;
-      
-      addDebug("🔍 Buscando código: " + codigoActual);
       
       const errorMsg = document.getElementById("errorMsg");
       errorMsg.innerText = "";
@@ -183,76 +164,47 @@
       document.getElementById("verificarDniInput").value = "";
       document.getElementById("boletaInput").value = "";
 
-      try {
-          addDebug("📡 Consultando tabla 'cupones' con .select('*').eq('codigo', '" + codigoActual + "')");
-          
-          const { data: cupon, error: errorCupon } = await _supabase
-              .from("cupones")
-              .select("*")
-              .eq("codigo", codigoActual)
-              .maybeSingle();
+      const { data: cupon, error: errorCupon } = await _supabase
+          .from("cupones")
+          .select("*")
+          .eq("codigo", codigoActual)
+          .maybeSingle();
 
-          if (errorCupon) {
-              addDebug("❌ ERROR EN CONSULTA: " + JSON.stringify(errorCupon));
-              console.error("Error completo:", errorCupon);
-              errorMsg.innerText = "❌ Error: " + (errorCupon?.message || "Desconocido");
-              return;
-          }
+      if (errorCupon || !cupon) {
+          console.error(errorCupon);
+          errorMsg.innerText = "❌ Código inválido o no existe.";
+          return;
+      }
 
-          if (!cupon) {
-              addDebug("⚠️ Cupón NO encontrado en la base de datos");
-              errorMsg.innerText = "❌ Código inválido o no existe.";
-              return;
-          }
+      const { data: cliente } = await _supabase
+          .from("clientes")
+          .select("*")
+          .eq("id", cupon.cliente_id)
+          .maybeSingle();
 
-          addDebug("✓ Cupón encontrado: ID=" + cupon.id + ", Estado=" + cupon.estado);
-          addDebug("📋 Datos del cupón: " + JSON.stringify(cupon));
+      document.getElementById("nombreCliente").innerText = cliente?.nombre || "No registrado";
+      document.getElementById("empresaCliente").innerText = cliente?.empresa || "No registrado";
+      ultimosDigitosDniCorrectos = cliente?.dni ? cliente.dni.toString().slice(-3) : "";
 
-          const { data: cliente, error: errorCliente } = await _supabase
-              .from("clientes")
-              .select("*")
-              .eq("id", cupon.cliente_id)
-              .maybeSingle();
+      document.getElementById("seccionCliente").style.display = "block";
+      document.getElementById("linkCerrarSesion").style.display = "none";
 
-          if (errorCliente) {
-              addDebug("⚠️ Error obteniendo cliente: " + JSON.stringify(errorCliente));
-          }
+      const txtEstado = document.getElementById("estadoCodigo");
+      const btnCanjear = document.getElementById("btnCanjear");
 
-          if (cliente) {
-              addDebug("✓ Cliente encontrado: " + cliente.nombre);
-          }
-
-          document.getElementById("nombreCliente").innerText = cliente?.nombre || "No registrado";
-          document.getElementById("empresaCliente").innerText = cliente?.empresa || "No registrado";
-          ultimosDigitosDniCorrectos = cliente?.dni ? cliente.dni.toString().slice(-3) : "";
-
-          document.getElementById("seccionCliente").style.display = "block";
-          document.getElementById("linkCerrarSesion").style.display = "none";
-
-          const txtEstado = document.getElementById("estadoCodigo");
-          const btnCanjear = document.getElementById("btnCanjear");
-
-          if (cupon.estado === "canjeado") {
-              addDebug("🔴 Cupón YA FUE CANJEADO");
-              txtEstado.innerHTML = "<span style='color:red;'>YA CANJEADO</span>";
-              btnCanjear.disabled = true;
-              btnCanjear.innerText = "No disponible";
-              document.getElementById("bloqueSeguridad").style.display = "none";
-              document.getElementById("seccionBoleta").style.display = "none";
-              document.getElementById("seccionBotones").style.display = "none";
-          } else {
-              addDebug("🟢 Cupón DISPONIBLE para canjear");
-              txtEstado.innerHTML = "<span style='color:green;'>DISPONIBLE</span>";
-              document.getElementById("bloqueSeguridad").style.display = "block";
-              document.getElementById("seccionBoleta").style.display = "block";
-              document.getElementById("seccionBotones").style.display = "block";
-              validarFiltros();
-          }
-
-      } catch (err) {
-          addDebug("❌ EXCEPCIÓN: " + err.message);
-          console.error("Excepción:", err);
-          errorMsg.innerText = "❌ Error inesperado: " + err.message;
+      if (cupon.estado === "canjeado") {
+          txtEstado.innerHTML = "<span style='color:red;'>YA CANJEADO</span>";
+          btnCanjear.disabled = true;
+          btnCanjear.innerText = "No disponible";
+          document.getElementById("bloqueSeguridad").style.display = "none";
+          document.getElementById("seccionBoleta").style.display = "none";
+          document.getElementById("seccionBotones").style.display = "none";
+      } else {
+          txtEstado.innerHTML = "<span style='color:green;'>DISPONIBLE</span>";
+          document.getElementById("bloqueSeguridad").style.display = "block";
+          document.getElementById("seccionBoleta").style.display = "block";
+          document.getElementById("seccionBotones").style.display = "block";
+          validarFiltros();
       }
   }
 
@@ -309,13 +261,11 @@
           .eq('codigo', codigoActual);
 
       if (error) {
-          addDebug("❌ Error en Update: " + JSON.stringify(error));
           console.error("Error en Update:", error);
           alert("Hubo un error al procesar el canje.");
           btnCanjear.disabled = false;
           btnCanjear.innerText = "Confirmar Canje";
       } else {
-          addDebug("✓ Canje procesado exitosamente");
           document.getElementById("bloqueSeguridad").style.display = "none";
           document.getElementById("seccionBoleta").style.display = "none";
           document.getElementById("seccionBotones").style.display = "none";
