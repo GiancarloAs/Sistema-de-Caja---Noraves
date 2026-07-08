@@ -185,44 +185,25 @@
       const btnCanjear = document.getElementById("btnCanjear");
       const errorDniMsg = document.getElementById("errorDniMsg");
       const badgeOk = document.getElementById("badgeOk");
-
       errorDniMsg.innerText = "";
       badgeOk.style.display = "none";
-
-      // 1. Validar que tenga los 3 dígitos puestos
-      // Filtro 1: El DNI debe tener 3 caracteres
       if (inputDniCaja.length < 3) {
           btnCanjear.disabled = true;
           btnCanjear.innerText = "Falta responder DNI";
           return;
       }
-
-      // 2. Verificar correspondencia exacta con el DNI interno
-      // Filtro 2: Los 3 dígitos deben coincidir de forma exacta
       if (inputDniCaja !== ultimosDigitosDniCorrectos) {
           errorDniMsg.innerText = "❌ Los dígitos no coinciden. ¡Alerta de fraude!";
           btnCanjear.disabled = true;
           btnCanjear.innerText = "DNI Incorrecto";
           return;
       }
-
-      // Si pasa el filtro de DNI, encendemos el sello visual interno
-      // Si el DNI es correcto, se activa el sello verde
       badgeOk.style.display = "inline-block";
-
-      // 3. Condición estricta de Boleta Obligatoria para liberar el botón final
-      if (boletaTxt.length > 0) {
-          btnCanjear.disabled = false;
-          btnCanjear.innerText = "Confirmar Canje";
-      } else {
-      // Filtro 3: Validar de manera obligatoria que exista la boleta contable
       if (boletaTxt.length === 0) {
           btnCanjear.disabled = true;
           btnCanjear.innerText = "Ingrese Boleta (Obligatorio)";
           return;
       }
-
-      // Si pasa todos los filtros, liberamos el botón final
       btnCanjear.disabled = false;
       btnCanjear.innerText = "Confirmar Canje";
   }
