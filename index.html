@@ -80,7 +80,7 @@
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let codigoActual = "";
-  let tiendaActiva = ""; // Solo se declara una vez
+  let tiendaActiva = ""; 
 
   function loginTienda() {
       const tienda = document.getElementById("selectTienda").value;
@@ -89,7 +89,6 @@
 
       errorLogin.innerText = "";
 
-      // Verificación simplificada y corregida
       if ((tienda === "Tienda Larco" && pass === "tienlar01") || 
           (tienda === "Tienda Ingeniería" && pass === "tieninge01")) {
           
@@ -134,9 +133,10 @@
 
       if (!codigoActual) return;
 
+      // Consulta corregida para obtener datos relacionados
       const { data, error } = await _supabase
         .from('cupones')
-        .select('estado, clientes(nombre, dni, telefono, empresa)')
+        .select('*, clientes(*)') 
         .eq('codigo', codigoActual)
         .maybeSingle();
 
@@ -145,29 +145,26 @@
           return;
       }
 
-      const datosCliente = data.clientes || data['clientes!cupones_cliente_id_fkey'];
+      const datosCliente = data.clientes;
 
       document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "No registrado";
       document.getElementById("telefonoCliente").innerText = datosCliente && datosCliente.telefono ? datosCliente.telefono : "No registrado";
       document.getElementById("empresaCliente").innerText = datosCliente && datosCliente.empresa ? datosCliente.empresa : "No registrado";
 
       if (datosCliente && datosCliente.dni) {
-          // Asignación única corregida
-          let dniLimpio = datosCliente.dni.toString().trim();
-          ultimosDigitosDniCorrectos = dniLimpio.slice(-3);
+          ultimosDigitosDniCorrectos = datosCliente.dni.toString().trim().slice(-3);
       } else {
           ultimosDigitosDniCorrectos = "000";
       }
 
-      const txtEstado = document.getElementById("estadoCodigo");
       seccionCliente.style.display = "block";
 
       if (data.estado === 'canjeado') {
-          txtEstado.innerHTML = "<span style='color:red;'>YA CANJEADO</span>";
+          document.getElementById("estadoCodigo").innerHTML = "<span style='color:red;'>YA CANJEADO</span>";
           btnCanjear.disabled = true;
           btnCanjear.innerText = "No disponible";
       } else {
-          txtEstado.innerHTML = "<span style='color:green;'>DISPONIBLE</span>";
+          document.getElementById("estadoCodigo").innerHTML = "<span style='color:green;'>DISPONIBLE</span>";
           bloqueSeguridad.style.display = "block";
           seccionBoleta.style.display = "block";
           btnCanjear.disabled = true;
