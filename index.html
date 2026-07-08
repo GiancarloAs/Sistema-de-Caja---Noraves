@@ -1,56 +1,51 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Caja - Canjes Ultraseguros</title>
+    <title>Panel de Caja - Canjes</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: Arial, sans-serif; background: #f4f7f6; padding: 40px; display: flex; justify-content: center; align-items: center; min-height: 80vh; }
-        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 420px; text-align: center; }
-        input { width: 85%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; text-align: center; }
-        input[type="text"] { text-transform: uppercase; }
-        button { width: 90%; padding: 12px; background: #24b47e; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        button:disabled { background: #cccccc; cursor: not-allowed; }
-        .info-cliente { margin-top: 20px; padding: 15px; border-radius: 4px; background: #eef9f5; display: none; text-align: left; }
-        .alerta { color: red; margin-top: 10px; font-weight: bold; }
-        .tienda-tag { background: #24b47e; color: white; padding: 5px 10px; border-radius: 20px; font-size: 12px; float: right; font-weight: bold; }
+        body { font-family: sans-serif; background: #f4f7f6; padding: 20px; display: flex; justify-content: center; }
+        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; text-transform: uppercase; }
+        button { width: 94%; padding: 12px; background: #24b47e; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .info-cliente { margin-top: 20px; padding: 15px; background: #eef9f5; display: none; text-align: left; }
+        .alerta { color: red; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div id="pantallaLogin" class="card">
     <h2>Acceso: Tienda Larco</h2>
-    <input type="password" id="passTienda" placeholder="Contraseña de cajero">
+    <input type="password" id="passTienda" placeholder="Contraseña">
     <button onclick="loginTienda()">Ingresar</button>
     <div id="errorLogin" class="alerta"></div>
 </div>
 
 <div id="pantallaCanje" class="card" style="display: none;">
-    <div>
-        <span class="tienda-tag">Tienda Larco</span>
-        <h2 style="text-align: left; margin-top: 0;">Validación</h2>
-    </div>
+    <h2>Validación de Cupón</h2>
     <input type="text" id="codigoInput" placeholder="Introduce el código">
-    <button id="btnBuscar" onclick="buscarCodigo()">Buscar Código</button>
+    <button onclick="buscarCodigo()">Buscar Código</button>
     <div id="errorMsg" class="alerta"></div>
 
     <div id="seccionCliente" class="info-cliente">
         <p><strong>Cliente:</strong> <span id="nombreCliente"></span></p>
         <p><strong>Empresa:</strong> <span id="empresaCliente"></span></p>
         <p><strong>Estado:</strong> <span id="estadoCodigo"></span></p>
-        <button id="btnCanjear" onclick="canjearCodigo()">Procesar Canje</button>
     </div>
-    <p style="margin-top: 25px;"><a href="#" onclick="location.reload()">Cerrar Sesión</a></p>
+    <p><a href="#" onclick="location.reload()">Cerrar Sesión</a></p>
 </div>
 
 <script>
-  const _supabase = supabase.createClient("https://aollztxtygxarlueflxq.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbGx6dHh0eWd4YXJsdWVmbHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMjU0NzMsImV4cCI6MjA5ODYwMTQ3M30.v3LIghE_kbpab9j2fVx_qmawKbbsTCX0ZxsoyeZRo-Q");
+  // REEMPLAZA ESTOS DATOS
+  const SUPABASE_URL = "https://aollztxtygxarlueflxq.supabase.co/rest/v1/";
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbGx6dHh0eWd4YXJsdWVmbHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMjU0NzMsImV4cCI6MjA5ODYwMTQ3M30.v3LIghE_kbpab9j2fVx_qmawKbbsTCX0ZxsoyeZRo-Q";
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   function loginTienda() {
-      const pass = document.getElementById("passTienda").value;
-      // Solo contraseña para Tienda Larco
-      if (pass === "tienlar01") {
+      if (document.getElementById("passTienda").value === "tienlar01") {
           document.getElementById("pantallaLogin").style.display = "none";
           document.getElementById("pantallaCanje").style.display = "block";
       } else {
@@ -59,27 +54,32 @@
   }
 
   async function buscarCodigo() {
-      const codigo = document.getElementById("codigoInput").value.trim().toUpperCase();
+      const codigoRaw = document.getElementById("codigoInput").value;
+      const codigoLimpio = codigoRaw.trim().toUpperCase();
+      
       const { data, error } = await _supabase
           .from('cupones')
-          .select('estado, nombre_cliente, empresa') // Ajusta estos nombres a los de tu tabla
-          .eq('codigo', codigo)
+          .select('estado, nombre, empresa') // Columna corregida aquí
+          .eq('codigo', codigoLimpio)
           .maybeSingle();
 
-      if (error || !data) {
-          document.getElementById("errorMsg").innerText = "❌ Código no encontrado.";
+      if (error) {
+          console.error("Error de Supabase:", error);
+          document.getElementById("errorMsg").innerText = "❌ Error: " + error.message;
           return;
       }
 
-      document.getElementById("nombreCliente").innerText = data.nombre_cliente || "N/A";
-      document.getElementById("empresaCliente").innerText = data.empresa || "N/A";
-      document.getElementById("estadoCodigo").innerText = data.estado;
-      document.getElementById("seccionCliente").style.display = "block";
-      document.getElementById("errorMsg").innerText = "";
-  }
-
-  async function canjearCodigo() {
-      alert("Lógica de actualización pendiente");
+      if (!data) {
+          document.getElementById("errorMsg").innerText = "❌ Código no encontrado.";
+          document.getElementById("seccionCliente").style.display = "none";
+      } else {
+          document.getElementById("errorMsg").innerText = "";
+          // Asignación corregida aquí para usar data.nombre
+          document.getElementById("nombreCliente").innerText = data.nombre || "N/A";
+          document.getElementById("empresaCliente").innerText = data.empresa || "N/A";
+          document.getElementById("estadoCodigo").innerText = data.estado || "Desconocido";
+          document.getElementById("seccionCliente").style.display = "block";
+      }
   }
 </script>
 </body>
