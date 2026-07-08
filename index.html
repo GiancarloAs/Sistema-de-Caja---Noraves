@@ -116,34 +116,39 @@
       codigoActual = input.value.trim().toUpperCase();
 
       const errorMsg = document.getElementById("errorMsg");
-      const seccionCliente = document.getElementById("seccionCliente");
-      const bloqueSeguridad = document.getElementById("bloqueSeguridad");
-      const seccionBoleta = document.getElementById("seccionBoleta");
-      const btnCanjear = document.getElementById("btnCanjear");
-      const badgeOk = document.getElementById("badgeOk");
-
-      errorMsg.innerText = "";
-      document.getElementById("errorDniMsg").innerText = "";
-      seccionCliente.style.display = "none";
-      bloqueSeguridad.style.display = "none";
-      seccionBoleta.style.display = "none";
-      badgeOk.style.display = "none";
-      document.getElementById("verificarDniInput").value = "";
-      document.getElementById("boletaInput").value = "";
+      errorMsg.innerText = "Buscando..."; // Feedback visual
 
       if (!codigoActual) return;
 
-      // Consulta corregida para obtener datos relacionados
+      // Consulta de depuración
       const { data, error } = await _supabase
         .from('cupones')
         .select('*, clientes(*)') 
         .eq('codigo', codigoActual)
         .maybeSingle();
 
-      if (error || !data) {
-          errorMsg.innerText = "❌ Código inválido o no existe.";
+      // ESTO ES LO QUE NOS DIRÁ EL ERROR REAL
+      if (error) {
+          console.error("ERROR DE SUPABASE:", error);
+          errorMsg.innerText = "Error en DB: " + error.message;
           return;
       }
+
+      if (!data) {
+          console.warn("No se encontró el código:", codigoActual);
+          errorMsg.innerText = "❌ Código no encontrado en la base de datos.";
+          return;
+      }
+
+      console.log("Datos recibidos correctamente:", data);
+      
+      // Si llega aquí, es que los datos existen, procedemos con la lógica normal
+      const datosCliente = data.clientes;
+      document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "No registrado";
+      // ... resto de tu lógica de visualización ...
+      document.getElementById("seccionCliente").style.display = "block";
+      // ...
+  }
 
       const datosCliente = data.clientes;
 
