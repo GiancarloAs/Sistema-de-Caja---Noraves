@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -45,7 +44,6 @@
     <div id="seccionCliente" class="info-cliente">
         <span id="badgeOk" class="badge-verificado">✓ IDENTIDAD CONFIRMADA</span>
         <p><strong>Cliente:</strong> <span id="nombreCliente"></span></p>
-        <p><strong>Teléfono:</strong> <span id="telefonoCliente"></span></p>
         <p><strong>Empresa:</strong> <span id="empresaCliente"></span></p>
         <p><strong>Estado del Cupón:</strong> <span id="estadoCodigo"></span></p>
         
@@ -80,10 +78,8 @@
   function loginTienda() {
       const pass = document.getElementById("passTienda").value;
       const errorLogin = document.getElementById("errorLogin");
-      
       errorLogin.innerText = "";
 
-      // Solo valida la contraseña de Tienda Larco
       if (pass === "tienlar01") {
           document.getElementById("tagTiendaActiva").innerText = tiendaActiva;
           document.getElementById("pantallaLogin").style.display = "none";
@@ -102,7 +98,6 @@
       document.getElementById("errorMsg").innerText = "";
   }
 
-  // ... (El resto de las funciones buscarCodigo, validarFiltros y canjearCodigo permanecen iguales)
   async function buscarCodigo() {
       const input = document.getElementById("codigoInput");
       codigoActual = input.value.trim().toUpperCase();
@@ -125,9 +120,10 @@
 
       if (!codigoActual) return;
 
+      // Consulta modificada: Se eliminó 'telefono'
       const { data, error } = await _supabase
         .from('cupones')
-        .select('estado, clientes(nombre, dni, telefono, empresa)')
+        .select('estado, clientes(nombre, dni, empresa)')
         .eq('codigo', codigoActual)
         .maybeSingle();
 
@@ -139,7 +135,6 @@
       const datosCliente = data.clientes || data['clientes!cupones_cliente_id_fkey'];
       
       document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "No registrado";
-      document.getElementById("telefonoCliente").innerText = datosCliente && datosCliente.telefono ? datosCliente.telefono : "No registrado";
       document.getElementById("empresaCliente").innerText = datosCliente && datosCliente.empresa ? datosCliente.empresa : "No registrado";
       
       if (datosCliente && datosCliente.dni) {
