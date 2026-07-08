@@ -113,73 +113,29 @@
   }
 
   async function buscarCodigo() {
-      const input = document.getElementById("codigoInput");
-      codigoActual = input.value.trim().toUpperCase();
-
-      const errorMsg = document.getElementById("errorMsg");
-      const seccionCliente = document.getElementById("seccionCliente");
-      const bloqueSeguridad = document.getElementById("bloqueSeguridad");
-      const seccionBoleta = document.getElementById("seccionBoleta");
-      const btnCanjear = document.getElementById("btnCanjear");
-      const badgeOk = document.getElementById("badgeOk");
-
-      errorMsg.innerText = "";
-      document.getElementById("errorDniMsg").innerText = "";
-      seccionCliente.style.display = "none";
-      bloqueSeguridad.style.display = "none";
-      seccionBoleta.style.display = "none";
-      badgeOk.style.display = "none";
-      document.getElementById("verificarDniInput").value = "";
-      document.getElementById("boletaInput").value = "";
-
-      if (!codigoActual) return;
-
-      const { data, error } = await _supabase
-        .from('cupones')
-        .select('estado, clientes(nombre, dni, telefono, empresa)')
-        .eq('codigo', codigoActual)
-        .maybeSingle();
-
-      if (error || !data) {
-          console.error("Error detectado:", error);
-          errorMsg.innerText = "❌ Código inválido o no existe.";
-          return;
-      }
-
-      const datosCliente = data.clientes || data['clientes!cupones_cliente_id_fkey'];
-
-      // Renderizar datos menos el DNI (se mantiene privado para evitar que la cajera haga trampa)
-      // Mostrar info MENOS el DNI
-      document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "No registrado";
-      document.getElementById("telefonoCliente").innerText = datosCliente && datosCliente.telefono ? datosCliente.telefono : "No registrado";
-      document.getElementById("empresaCliente").innerText = datosCliente && datosCliente.empresa ? datosCliente.empresa : "No registrado";
-
-      // Extraer los últimos 3 dígitos del DNI en segundo plano para la validación cruzada
-      // Capturar los 3 dígitos en segundo plano (en secreto)
-      if (datosCliente && datosCliente.dni) {
-          const dniLimpio = datosCliente.dni.toString().trim();
-          ultimosDigitosDniCorrectos = dniLimpio.slice(-3);
-      } else {
-          ultimosDigitosDniCorrectos = "000"; 
-      }
-
-      const txtEstado = document.getElementById("estadoCodigo");
-      seccionCliente.style.display = "block";
-
-      if (data.estado === 'canjeado') {
-          txtEstado.innerHTML = "<span style='color:red;'>YA CANJEADO</span>";
-          btnCanjear.disabled = true;
-          btnCanjear.innerText = "No disponible";
-      } else {
-          txtEstado.innerHTML = "<span style='color:green;'>DISPONIBLE</span>";
-          bloqueSeguridad.style.display = "block";
-          seccionBoleta.style.display = "block";
-          btnCanjear.disabled = true; 
-          btnCanjear.innerText = "Complete los filtros";
-      }
-  }
-
-  function validarFiltros() {
+codigoActual=document.getElementById("codigoInput").value.trim().toUpperCase();
+if(!codigoActual)return;
+const errorMsg=document.getElementById("errorMsg");
+errorMsg.innerText="";
+document.getElementById("seccionCliente").style.display="none";
+document.getElementById("bloqueSeguridad").style.display="none";
+document.getElementById("seccionBoleta").style.display="none";
+document.getElementById("badgeOk").style.display="none";
+document.getElementById("verificarDniInput").value="";
+document.getElementById("boletaInput").value="";
+const {data:cupon,error:errorCupon}=await _supabase.from("cupones").select("*").eq("codigo",codigoActual).maybeSingle();
+if(errorCupon||!cupon){console.error(errorCupon);errorMsg.innerText="❌ Código inválido o no existe.";return;}
+const {data:cliente}=await _supabase.from("clientes").select("*").eq("id",cupon.cliente_id).maybeSingle();
+document.getElementById("nombreCliente").innerText=cliente?.nombre||"No registrado";
+document.getElementById("telefonoCliente").innerText=cliente?.telefono||"No registrado";
+document.getElementById("empresaCliente").innerText=cliente?.empresa||"No registrado";
+ultimosDigitosDniCorrectos=cliente?.dni?cliente.dni.toString().slice(-3):"";
+document.getElementById("seccionCliente").style.display="block";
+const txtEstado=document.getElementById("estadoCodigo");
+if(cupon.estado==="canjeado"){txtEstado.innerHTML="<span style='color:red;'>YA CANJEADO</span>";btnCanjear.disabled=true;btnCanjear.innerText="No disponible";}
+else{txtEstado.innerHTML="<span style='color:green;'>DISPONIBLE</span>";document.getElementById("bloqueSeguridad").style.display="block";document.getElementById("seccionBoleta").style.display="block";btnCanjear.disabled=true;btnCanjear.innerText="Complete los filtros";}
+}
+function validarFiltros() {
       const inputDniCaja = document.getElementById("verificarDniInput").value.trim();
       const boletaTxt = document.getElementById("boletaInput").value.trim();
       const btnCanjear = document.getElementById("btnCanjear");
