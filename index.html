@@ -76,13 +76,11 @@
 
 <script>
   const SUPABASE_URL = "https://aollztxtygxarlueflxq.supabase.co";
-  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbGx6dHh0eWd4YXJsdWVmbHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMjU0NzMsImV4cCI6MjA5ODYwMTQ3M30.v3LIghE_kbpab9j2fVx_qmawKbbsTCX0ZxsoyeZRo-Q";   
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbGx6dHh0eWd4YXJsdWVmbHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMjU0NzMsImV4cCI6MjA5ODYwMTQ3M30.v3LIghE_kbpab9j2fVx_qmawKbbsTCX0ZxsoyeZRo-Q";
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let codigoActual = "";
-  let tiendaActiva = "";
-  let tiendaActiva = "Tienda Larco";
-  let ultimosDigitosDniCorrectos = "";
+  let tiendaActiva = ""; // Solo se declara una vez
 
   function loginTienda() {
       const tienda = document.getElementById("selectTienda").value;
@@ -91,25 +89,18 @@
 
       errorLogin.innerText = "";
 
-      if (tienda === "Tienda Larco" && pass === "tienlar01") {
-          tiendaActiva = "Tienda Larco";
-      } else if (tienda === "Tienda Ingeniería" && pass === "tieninge01") {
-          tiendaActiva = "Tienda Ingeniería";
-      // Solo valida la contraseña de Tienda Larco
-      if (pass === "tienlar01") {
+      // Verificación simplificada y corregida
+      if ((tienda === "Tienda Larco" && pass === "tienlar01") || 
+          (tienda === "Tienda Ingeniería" && pass === "tieninge01")) {
+          
+          tiendaActiva = tienda;
           document.getElementById("tagTiendaActiva").innerText = tiendaActiva;
           document.getElementById("pantallaLogin").style.display = "none";
           document.getElementById("pantallaCanje").style.display = "block";
-          document.getElementById("passTienda").value = ""; 
+          document.getElementById("passTienda").value = "";
       } else {
           errorLogin.innerText = "❌ Contraseña incorrecta.";
-          return;
       }
-
-      document.getElementById("tagTiendaActiva").innerText = tiendaActiva;
-      document.getElementById("pantallaLogin").style.display = "none";
-      document.getElementById("pantallaCanje").style.display = "block";
-      document.getElementById("passTienda").value = ""; 
   }
 
   function cerrarSesion() {
@@ -121,7 +112,6 @@
       document.getElementById("errorMsg").innerText = "";
   }
 
-  // ... (El resto de las funciones buscarCodigo, validarFiltros y canjearCodigo permanecen iguales)
   async function buscarCodigo() {
       const input = document.getElementById("codigoInput");
       codigoActual = input.value.trim().toUpperCase();
@@ -151,25 +141,22 @@
         .maybeSingle();
 
       if (error || !data) {
-          console.error("Error detectado:", error);
           errorMsg.innerText = "❌ Código inválido o no existe.";
           return;
       }
 
       const datosCliente = data.clientes || data['clientes!cupones_cliente_id_fkey'];
 
-      // Mostrar info MENOS el DNI
       document.getElementById("nombreCliente").innerText = datosCliente ? datosCliente.nombre : "No registrado";
       document.getElementById("telefonoCliente").innerText = datosCliente && datosCliente.telefono ? datosCliente.telefono : "No registrado";
       document.getElementById("empresaCliente").innerText = datosCliente && datosCliente.empresa ? datosCliente.empresa : "No registrado";
 
-      // Capturar los 3 dígitos en segundo plano (en secreto)
       if (datosCliente && datosCliente.dni) {
-          const dniLimpio = datosCliente.dni.toString().trim();
+          // Asignación única corregida
+          let dniLimpio = datosCliente.dni.toString().trim();
           ultimosDigitosDniCorrectos = dniLimpio.slice(-3);
-          ultimosDigitosDniCorrectos = datosCliente.dni.toString().trim().slice(-3);
       } else {
-          ultimosDigitosDniCorrectos = "000"; 
+          ultimosDigitosDniCorrectos = "000";
       }
 
       const txtEstado = document.getElementById("estadoCodigo");
@@ -177,15 +164,13 @@
 
       if (data.estado === 'canjeado') {
           txtEstado.innerHTML = "<span style='color:red;'>YA CANJEADO</span>";
-          document.getElementById("estadoCodigo").innerHTML = "<span style='color:red;'>YA CANJEADO</span>";
           btnCanjear.disabled = true;
           btnCanjear.innerText = "No disponible";
       } else {
           txtEstado.innerHTML = "<span style='color:green;'>DISPONIBLE</span>";
-          document.getElementById("estadoCodigo").innerHTML = "<span style='color:green;'>DISPONIBLE</span>";
           bloqueSeguridad.style.display = "block";
           seccionBoleta.style.display = "block";
-          btnCanjear.disabled = true; 
+          btnCanjear.disabled = true;
           btnCanjear.innerText = "Complete los filtros";
       }
   }
@@ -200,33 +185,27 @@
       errorDniMsg.innerText = "";
       badgeOk.style.display = "none";
 
-      // Filtro 1: El DNI debe tener 3 caracteres
       if (inputDniCaja.length < 3) {
           btnCanjear.disabled = true;
           btnCanjear.innerText = "Falta responder DNI";
           return;
       }
 
-      // Filtro 2: Los 3 dígitos deben coincidir de forma exacta
       if (inputDniCaja !== ultimosDigitosDniCorrectos) {
-          errorDniMsg.innerText = "❌ Los dígitos no coinciden. ¡Alerta de fraude!";
           errorDniMsg.innerText = "❌ Los dígitos no coinciden.";
           btnCanjear.disabled = true;
           btnCanjear.innerText = "DNI Incorrecto";
           return;
       }
 
-      // Si el DNI es correcto, se activa el sello verde
       badgeOk.style.display = "inline-block";
 
-      // Filtro 3: Validar de manera obligatoria que exista la boleta contable
       if (boletaTxt.length === 0) {
           btnCanjear.disabled = true;
           btnCanjear.innerText = "Ingrese Boleta (Obligatorio)";
           return;
       }
 
-      // Si pasa todos los filtros, liberamos el botón final
       btnCanjear.disabled = false;
       btnCanjear.innerText = "Confirmar Canje";
   }
@@ -235,21 +214,20 @@
       const btnCanjear = document.getElementById("btnCanjear");
       const boletaValor = document.getElementById("boletaInput").value.trim().toUpperCase();
 
-      btnCanjear.disabled = true; 
+      btnCanjear.disabled = true;
       btnCanjear.innerText = "Procesando...";
 
       const { error } = await _supabase
           .from('cupones')
-          .update({ 
-              estado: 'canjeado', 
-              fecha_canje: new Date().toISOString(),
-              tienda_canje: tiendaActiva,
-              nro_boleta: boletaValor
+          .update({
+               estado: 'canjeado',
+               fecha_canje: new Date().toISOString(),
+               tienda_canje: tiendaActiva,
+               nro_boleta: boletaValor
           })
           .eq('codigo', codigoActual);
 
       if (error) {
-          console.error("Error en Update:", error);
           alert("Hubo un error al procesar el canje.");
           btnCanjear.disabled = false;
           btnCanjear.innerText = "Confirmar Canje";
