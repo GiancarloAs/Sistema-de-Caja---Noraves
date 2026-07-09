@@ -12,20 +12,22 @@
         input[type="text"] { text-transform: uppercase; }
         button { width: 90%; padding: 12px; background: #24b47e; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold; margin-top: 10px; }
         button:disabled { background: #cccccc; cursor: not-allowed; }
-        .info-cliente { margin-top: 20px; padding: 15px; border-radius: 4px; background: #eef9f5; display: none; text-align: left; }
         .alerta { color: red; margin-top: 10px; font-weight: bold; text-align: center; }
+        .alerta.exito { color: #155724; background-color: #d4edda; padding: 10px; border-radius: 4px; }
         .tienda-tag { background: #24b47e; color: white; padding: 5px 10px; border-radius: 20px; font-size: 12px; float: right; font-weight: bold; }
-        .seccion-seguridad { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #24b47e; background: #fff3cd; padding: 10px; border-radius: 4px; }
-        .campo-boleta { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc; }
+        .info-cliente { margin-top: 20px; padding: 15px; border-radius: 4px; background: #eef9f5; display: none; text-align: left; }
+        .info-exito { margin-top: 20px; padding: 15px; border-radius: 4px; background: #d4edda; display: none; text-align: center; }
         .badge-verificado { color: #155724; background-color: #d4edda; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; float: right; display: none; }
         .contenedor-botones { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 15px; }
         .contenedor-botones button { width: 48%; flex: 1; min-width: 120px; }
         .btn-secundario { background: #6c757d; }
         .btn-secundario:hover:not(:disabled) { background: #5a6268; }
+        .seccion-cupones { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc; display: none; }
     </style>
 </head>
 <body>
 
+<!-- PANTALLA DE LOGIN -->
 <div id="pantallaLogin" class="card">
     <h2>Acceso de Caja</h2>
     <p style="color: #666; font-size: 14px;">Ingresa la contraseña de Tienda Larco</p>
@@ -34,24 +36,229 @@
     <div id="errorLogin" class="alerta"></div>
 </div>
 
+<!-- PANTALLA DE CANJE -->
 <div id="pantallaCanje" class="card" style="display: none;">
     <div>
         <span id="tagTiendaActiva" class="tienda-tag"></span>
-        <h2 style="text-align: left; margin-top: 0;">Validación</h2>
+        <h2 style="text-align: left; margin-top: 0;">Validación de Canje</h2>
     </div>
-    <input type="text" id="codigoInput" placeholder="Introduce el código">
-    <button id="btnBuscar" onclick="buscarCodigo()">Buscar Código</button>
 
-    <div id="errorMsg" class="alerta"></div>
+    <!-- PASO 1: VALIDAR DNI -->
+    <div id="pasoDNI">
+        <p style="color: #666; font-size: 14px;">Paso 1: Ingresa el DNI del cliente</p>
+        <input type="text" id="dniInput" placeholder="DNI" maxlength="8">
+        <button onclick="validarDNI()">Validar DNI</button>
+        <div id="errorDNI" class="alerta"></div>
+    </div>
 
-    <div id="seccionCliente" class="info-cliente">
-        <span id="badgeOk" class="badge-verificado">✓ IDENTIDAD CONFIRMADA</span>
+    <!-- INFORMACIÓN DEL CLIENTE (Mostrada después de validar DNI) -->
+    <div id="infoDniValidado" class="info-cliente" style="display: none;">
+        <span id="badgeOk" class="badge-verificado" style="display: inline;">✓ IDENTIDAD CONFIRMADA</span>
         <p><strong>Cliente:</strong> <span id="nombreCliente"></span></p>
         <p><strong>Empresa:</strong> <span id="empresaCliente"></span></p>
-        <p><strong>Estado del Cupón:</strong> <span id="estadoCodigo"></span></p>
+    </div>
 
-        <div id="bloqueSeguridad" class="seccion-seguridad" style="display: none;">
-            <label style="font-size: 13px; font-weight: bold; color: #856404; display: block; margin-bottom: 5px;">
-                ⚠️ FILTRO DE SEGURIDAD: Pregunte al cliente los últimos 3 dígitos de su DNI:
-            </label>
-            <input type="text" id="verificarDniInput" maxlength="3" placeholder="Ej:
+    <!-- PASO 2: INGRESAR NÚMERO DE CUPÓN -->
+    <div id="pasoCupon" class="seccion-cupones">
+        <p style="color: #666; font-size: 14px;">Paso 2: Ingresa el número de cupón</p>
+        <input type="text" id="numeroCuponInput" placeholder="Número de cupón">
+        <button onclick="canjearCupon()">Canjear Cupón</button>
+        <div id="errorCupon" class="alerta"></div>
+    </div>
+
+    <!-- MENSAJE DE ÉXITO -->
+    <div id="infoExito" class="info-exito" style="display: none;">
+        <h3 style="color: #155724; margin-top: 0;">✓ Canje Exitoso</h3>
+        <p style="color: #155724;"><strong>El cupón ha sido canjeado correctamente</strong></p>
+    </div>
+
+    <!-- BOTONES DE ACCIÓN (Mostrados después del canje) -->
+    <div id="botonesFinales" class="contenedor-botones" style="display: none;">
+        <button onclick="resetearFormulario()">Canjear Otro</button>
+        <button class="btn-secundario" onclick="cerrarSesion()">Cerrar Sesión</button>
+    </div>
+</div>
+
+<script>
+    // ===== CONFIGURACIÓN SUPABASE =====
+    const SUPABASE_URL = 'https://tu-supabase-url.supabase.co';
+    const SUPABASE_KEY = 'tu-supabase-key';
+    let supabase;
+
+    // Variables globales
+    let clienteDniActual = null;
+    let clienteActual = null;
+
+    // ===== INICIALIZAR SUPABASE =====
+    async function inicializarSupabase() {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    }
+
+    // ===== LOGIN DE TIENDA =====
+    async function loginTienda() {
+        const pass = document.getElementById('passTienda').value;
+        const errorDiv = document.getElementById('errorLogin');
+        
+        if (!pass) {
+            errorDiv.textContent = 'Ingresa la contraseña';
+            return;
+        }
+
+        // Aquí valida contra tu contraseña (cambiar según tu lógica)
+        if (pass === 'tu-contraseña-tienda') {
+            document.getElementById('pantallaLogin').style.display = 'none';
+            document.getElementById('pantallaCanje').style.display = 'block';
+            document.getElementById('tagTiendaActiva').textContent = 'Tienda Larco';
+            limpiarFormulario();
+        } else {
+            errorDiv.textContent = 'Contraseña incorrecta';
+        }
+    }
+
+    // ===== VALIDAR DNI =====
+    async function validarDNI() {
+        const dni = document.getElementById('dniInput').value.trim();
+        const errorDiv = document.getElementById('errorDNI');
+        
+        errorDiv.textContent = '';
+
+        if (!dni) {
+            errorDiv.textContent = 'Ingresa un DNI';
+            return;
+        }
+
+        if (!/^\d{8}$/.test(dni)) {
+            errorDiv.textContent = 'El DNI debe tener 8 dígitos';
+            return;
+        }
+
+        try {
+            // Buscar cliente por DNI en la tabla 'clientes'
+            const { data, error } = await supabase
+                .from('clientes')
+                .select('id, dni, nombre, empresa')
+                .eq('dni', dni)
+                .single();
+
+            if (error || !data) {
+                errorDiv.textContent = 'DNI no encontrado en la base de datos';
+                return;
+            }
+
+            // Guardar datos del cliente
+            clienteDniActual = dni;
+            clienteActual = data;
+
+            // Mostrar información del cliente
+            document.getElementById('nombreCliente').textContent = data.nombre || 'N/A';
+            document.getElementById('empresaCliente').textContent = data.empresa || 'N/A';
+            document.getElementById('infoDniValidado').style.display = 'block';
+            document.getElementById('pasoDNI').style.display = 'none';
+            document.getElementById('pasoCupon').style.display = 'block';
+
+        } catch (error) {
+            console.error('Error al validar DNI:', error);
+            errorDiv.textContent = 'Error al validar DNI: ' + error.message;
+        }
+    }
+
+    // ===== CANJEAR CUPÓN =====
+    async function canjearCupon() {
+        const numeroCupon = document.getElementById('numeroCuponInput').value.trim();
+        const errorDiv = document.getElementById('errorCupon');
+
+        errorDiv.textContent = '';
+
+        if (!numeroCupon) {
+            errorDiv.textContent = 'Ingresa el número de cupón';
+            return;
+        }
+
+        try {
+            // Buscar el cupón en la tabla 'cupones'
+            const { data: cupon, error: errorBusqueda } = await supabase
+                .from('cupones')
+                .select('id, numero_cupon, estado')
+                .eq('numero_cupon', numeroCupon)
+                .single();
+
+            if (errorBusqueda || !cupon) {
+                errorDiv.textContent = 'Cupón no encontrado';
+                return;
+            }
+
+            if (cupon.estado === 'canjeado') {
+                errorDiv.textContent = 'Este cupón ya ha sido canjeado';
+                return;
+            }
+
+            // Actualizar el cupón a estado 'canjeado'
+            const { error: errorActualizacion } = await supabase
+                .from('cupones')
+                .update({ estado: 'canjeado', fecha_canje: new Date(), dni_cliente: clienteDniActual })
+                .eq('id', cupon.id);
+
+            if (errorActualizacion) {
+                throw errorActualizacion;
+            }
+
+            // Mostrar mensaje de éxito
+            document.getElementById('pasoCupon').style.display = 'none';
+            document.getElementById('infoExito').style.display = 'block';
+            document.getElementById('botonesFinales').style.display = 'flex';
+
+        } catch (error) {
+            console.error('Error al canjear cupón:', error);
+            errorDiv.textContent = 'Error al canjear: ' + error.message;
+        }
+    }
+
+    // ===== RESETEAR FORMULARIO (Canjear Otro) =====
+    function resetearFormulario() {
+        document.getElementById('numeroCuponInput').value = '';
+        document.getElementById('dniInput').value = '';
+        document.getElementById('errorDNI').textContent = '';
+        document.getElementById('errorCupon').textContent = '';
+        document.getElementById('infoDniValidado').style.display = 'none';
+        document.getElementById('infoExito').style.display = 'none';
+        document.getElementById('botonesFinales').style.display = 'none';
+        document.getElementById('pasoDNI').style.display = 'block';
+        document.getElementById('pasoCupon').style.display = 'none';
+        
+        clienteDniActual = null;
+        clienteActual = null;
+        document.getElementById('dniInput').focus();
+    }
+
+    // ===== CERRAR SESIÓN =====
+    function cerrarSesion() {
+        document.getElementById('pantallaCanje').style.display = 'none';
+        document.getElementById('pantallaLogin').style.display = 'block';
+        document.getElementById('passTienda').value = '';
+        limpiarFormulario();
+    }
+
+    // ===== LIMPIAR FORMULARIO =====
+    function limpiarFormulario() {
+        document.getElementById('dniInput').value = '';
+        document.getElementById('numeroCuponInput').value = '';
+        document.getElementById('errorDNI').textContent = '';
+        document.getElementById('errorCupon').textContent = '';
+        document.getElementById('infoDniValidado').style.display = 'none';
+        document.getElementById('infoExito').style.display = 'none';
+        document.getElementById('botonesFinales').style.display = 'none';
+        document.getElementById('pasoDNI').style.display = 'block';
+        document.getElementById('pasoCupon').style.display = 'none';
+        
+        clienteDniActual = null;
+        clienteActual = null;
+    }
+
+    // ===== INICIALIZAR AL CARGAR LA PÁGINA =====
+    window.addEventListener('DOMContentLoaded', () => {
+        inicializarSupabase();
+    });
+</script>
+
+</body>
+</html>
