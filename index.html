@@ -537,14 +537,14 @@
                     🧾 PASO 3: Registrar Número de Boleta
                 </p>
             </div>
-            <input type="text" id="numeroBoleta" placeholder="Ej: B942-001234" maxlength="20">
+            <input type="text" id="numeroBoleta" placeholder="Número de boleta" maxlength="20">
             <button onclick="registrarBoleta(event)">✓ Confirmar Canje</button>
             <div id="errorBoleta" class="alerta error"></div>
             <div class="estado-procesando" id="estadoBoleta">
                 <div class="loading"></div> Procesando canje...
             </div>
             <div class="ayuda">
-                <strong>💡 Ayuda:</strong> Debe iniciar con <strong>B942-</strong>
+                <strong>💡 Ayuda:</strong> Verifica la información antes de continuar
             </div>
         </div>
 
@@ -926,13 +926,15 @@
         errorDiv.textContent = '';
 
         // Validación de Prefijo
-        if (!numeroBoleta.startsWith('B942')) {
-            errorDiv.textContent = '❌ La boleta debe comenzar con el prefijo "B942-"';
+        const boletaNormalizada = numeroBoleta.toUpperCase().trim();
+
+        if (!boletaNormalizada.startsWith('B942')) {
+            errorDiv.textContent = '❌ Verifica la información e inténtalo nuevamente.';
             return;
         }
-        
-        if (numeroBoleta.length <= 5) {
-            errorDiv.textContent = '⚠️ Ingresa el número de boleta completo después de "B942-"';
+
+        if (boletaNormalizada.length <= 4) {
+            errorDiv.textContent = '⚠️ Verifica la información e inténtalo nuevamente.';
             return;
         }
 
