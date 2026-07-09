@@ -603,6 +603,23 @@
     let numeroCuponActual = null;
     let verificacionVisualConfirmada = false;
     let fechaHoraActual = null;
+    let sesionCajaId = null;
+    let contadorCanjesSesion = 0;
+
+    // ===== HELPERS DE FECHA/HORA PARA LA BASE DE DATOS =====
+    function obtenerFechaISO(fecha) {
+        const y = fecha.getFullYear();
+        const m = String(fecha.getMonth() + 1).padStart(2, '0');
+        const d = String(fecha.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    function obtenerHora24(fecha) {
+        const h = String(fecha.getHours()).padStart(2, '0');
+        const m = String(fecha.getMinutes()).padStart(2, '0');
+        const s = String(fecha.getSeconds()).padStart(2, '0');
+        return `${h}:${m}:${s}`;
+    }
 
     // ===== INICIALIZAR SUPABASE =====
     async function inicializarSupabase() {
@@ -615,6 +632,118 @@
         const fecha = ahora.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const hora = ahora.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         return { fecha, hora, timestamp: ahora };
+    }
+
+    // ===== CREAR SESIÓN DE CAJA (al hacer login) =====
+    async function crearSesionCaja() {
+        try {
+            const ahora = new Date();
+            const { data, error } = await supabase
+                .from('sesiones_caja')
+                .insert({
+                    fecha_sesion: obtenerFechaISO(ahora),
+                    hora_inicio: ahora.toISOString(),
+                    estado: 'abierta',
+                    sede: 'Larco',
+                    total_canjes: 0
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            sesionCajaId = data.id;
+            contadorCanjesSesion = 0;
+        } catch (error) {
+            console.error('Error al crear sesión de caja:', error);
+        }
+    }
+
+    // ===== CERRAR SESIÓN DE CAJA (al cerrar sesión) =====
+    async function cerrarSesionCaja() {
+        if (!sesionCajaId) return;
+
+        try {
+            const { error } = await supabase
+                .from('sesiones_caja')
+                .update({
+                    hora_cierre: new Date().toISOString(),
+                    estado: 'cerrada',
+                    total_canjes: contadorCanjesSesion
+                })
+                .eq('id', sesionCajaId);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error al cerrar sesión de caja:', error);
+        } finally {
+            sesionCajaId = null;
+            contadorCanjesSesion = 0;
+        }
+    }
+
+    // ===== REGISTRAR AUDITORÍA DE CANJE =====
+    async function registrarAuditoria(numeroBoleta) {
+        try {
+            const { error } = await supabase
+                .from('auditorias_canje')
+                .insert({
+                    dni_cliente: clienteDniActual,
+                    nombre_cliente: clienteActual ? clienteActual.nombre : null,
+                    numero_cupon: numeroCuponActual,
+                    numero_boleta: numeroBoleta,
+                    sede: 'Larco',
+                    fecha_canje: fechaHoraActual.timestamp.toISOString(),
+                    hora_canje: obtenerHora24(fechaHoraActual.timestamp),
+                    estado_anterior: 'disponible',
+                    estado_nuevo: 'canjeado'
+                });
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error al registrar auditoría:', error);
+        }
+    }
+
+    // ===== ACTUALIZAR (O CREAR) REPORTE DIARIO =====
+    async function actualizarReporteDiario() {
+        const fechaHoy = obtenerFechaISO(new Date());
+
+        try {
+            const { data: existente, error: errorBusqueda } = await supabase
+                .from('reportes_diarios')
+                .select('id, total_clientes_procesados, total_cupones_canjeados, total_clientes_bloqueados')
+                .eq('fecha', fechaHoy)
+                .maybeSingle();
+
+            if (errorBusqueda) throw errorBusqueda;
+
+            if (existente) {
+                const { error: errorUpdate } = await supabase
+                    .from('reportes_diarios')
+                    .update({
+                        total_clientes_procesados: existente.total_clientes_procesados + 1,
+                        total_cupones_canjeados: existente.total_cupones_canjeados + 1,
+                        total_clientes_bloqueados: existente.total_clientes_bloqueados + 1
+                    })
+                    .eq('id', existente.id);
+
+                if (errorUpdate) throw errorUpdate;
+            } else {
+                const { error: errorInsert } = await supabase
+                    .from('reportes_diarios')
+                    .insert({
+                        fecha: fechaHoy,
+                        total_clientes_procesados: 1,
+                        total_cupones_canjeados: 1,
+                        total_clientes_bloqueados: 1
+                    });
+
+                if (errorInsert) throw errorInsert;
+            }
+        } catch (error) {
+            console.error('Error al actualizar reporte diario:', error);
+        }
     }
 
     // ===== ACTUALIZAR INDICADOR DE PASOS =====
@@ -651,6 +780,7 @@
             document.getElementById('pantallaLogin').style.display = 'none';
             document.getElementById('pantallaCanje').style.display = 'block';
             limpiarFormulario();
+            await crearSesionCaja();
             document.getElementById('dniInput').focus();
         } else {
             errorDiv.textContent = '❌ Contraseña incorrecta';
@@ -838,6 +968,18 @@
 
             if (errorBloqueoCliente) throw errorBloqueoCliente;
 
+            // Registrar en auditoría, reporte diario y sesión de caja
+            await registrarAuditoria(numeroBoleta);
+            await actualizarReporteDiario();
+
+            contadorCanjesSesion++;
+            if (sesionCajaId) {
+                await supabase
+                    .from('sesiones_caja')
+                    .update({ total_canjes: contadorCanjesSesion })
+                    .eq('id', sesionCajaId);
+            }
+
             // Mostrar resumen
             document.getElementById('resumenSede').textContent = 'Larco';
             document.getElementById('resumenFecha').textContent = fechaHoraActual.fecha;
@@ -892,7 +1034,8 @@
     }
 
     // ===== CERRAR SESIÓN =====
-    function cerrarSesion() {
+    async function cerrarSesion() {
+        await cerrarSesionCaja();
         document.getElementById('pantallaCanje').style.display = 'none';
         document.getElementById('pantallaLogin').style.display = 'block';
         document.getElementById('passTienda').value = '';
