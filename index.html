@@ -380,6 +380,60 @@
             border-left-color: #c33 !important;
             color: #c33;
         }
+
+        .verificacion-visual {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px dashed #e0e0e0;
+            display: none;
+            text-align: left;
+            animation: slideIn 0.3s ease;
+        }
+
+        .verificacion-visual.activa {
+            display: block;
+        }
+
+        .numero-cupon-grande {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            text-align: center;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 16px 0;
+            letter-spacing: 2px;
+            word-break: break-all;
+        }
+
+        .checkbox-verificacion {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            background: #fff8e1;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+
+        .checkbox-verificacion input[type="checkbox"] {
+            width: 24px;
+            height: 24px;
+            min-width: 24px;
+            margin: 2px 0 0 0;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .checkbox-verificacion label {
+            font-size: 14px;
+            color: #333;
+            font-weight: 600;
+            cursor: pointer;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -461,6 +515,29 @@
             </div>
         </div>
 
+        <!-- VERIFICACIÓN VISUAL DEL CUPÓN FÍSICO -->
+        <div id="verificacionVisual" class="verificacion-visual">
+            <div style="text-align: left;">
+                <p style="color: #666; font-size: 14px; font-weight: 600; margin-bottom: 4px;">
+                    👁️ VERIFICACIÓN VISUAL DEL CUPÓN
+                </p>
+                <p style="color: #999; font-size: 12px; margin-bottom: 8px;">
+                    Compara el número de abajo con el cupón físico entregado por el cliente
+                </p>
+            </div>
+            <div class="numero-cupon-grande" id="numeroCuponGrande">-</div>
+            <div class="checkbox-verificacion">
+                <input type="checkbox" id="checkVerificacionVisual" onchange="toggleBotonVerificacion()">
+                <label for="checkVerificacionVisual">
+                    Confirmo que verifiqué físicamente el cupón y el número coincide exactamente con el mostrado arriba
+                </label>
+            </div>
+            <button id="btnConfirmarVerificacion" onclick="confirmarVerificacionVisual(event)" disabled>
+                ✓ Confirmar y Continuar
+            </button>
+            <div id="errorVerificacion" class="alerta error"></div>
+        </div>
+
         <!-- PASO 3: INGRESAR NÚMERO DE BOLETA -->
         <div id="pasoBoleta" class="seccion-paso">
             <div style="text-align: left;">
@@ -523,6 +600,8 @@
     let clienteDniActual = null;
     let clienteActual = null;
     let cuponActualId = null;
+    let numeroCuponActual = null;
+    let verificacionVisualConfirmada = false;
     let fechaHoraActual = null;
 
     // ===== INICIALIZAR SUPABASE =====
@@ -676,18 +755,46 @@
             }
 
             cuponActualId = cupon.id;
-            fechaHoraActual = obtenerFechaHoraActual();
+            numeroCuponActual = cupon.numero_cupon;
 
             document.getElementById('pasoCupon').classList.remove('activa');
-            document.getElementById('pasoBoleta').classList.add('activa');
-            actualizarIndicadorPasos(3);
-            document.getElementById('numeroBoleta').focus();
+            document.getElementById('numeroCuponGrande').textContent = cupon.numero_cupon;
+            document.getElementById('checkVerificacionVisual').checked = false;
+            document.getElementById('btnConfirmarVerificacion').disabled = true;
+            document.getElementById('errorVerificacion').textContent = '';
+            document.getElementById('verificacionVisual').classList.add('activa');
 
         } catch (error) {
             estadoDiv.classList.remove('activo');
             console.error('Error:', error);
             errorDiv.textContent = '⚠️ Error al validar cupón: ' + error.message;
         }
+    }
+
+    // ===== HABILITAR/DESHABILITAR BOTÓN DE VERIFICACIÓN =====
+    function toggleBotonVerificacion() {
+        const check = document.getElementById('checkVerificacionVisual');
+        document.getElementById('btnConfirmarVerificacion').disabled = !check.checked;
+    }
+
+    // ===== CONFIRMAR VERIFICACIÓN VISUAL Y PASAR A BOLETA =====
+    function confirmarVerificacionVisual(e) {
+        e.preventDefault();
+        const check = document.getElementById('checkVerificacionVisual');
+        const errorDiv = document.getElementById('errorVerificacion');
+
+        if (!check.checked) {
+            errorDiv.textContent = '⚠️ Debes confirmar la verificación visual antes de continuar';
+            return;
+        }
+
+        verificacionVisualConfirmada = true;
+        fechaHoraActual = obtenerFechaHoraActual();
+
+        document.getElementById('verificacionVisual').classList.remove('activa');
+        document.getElementById('pasoBoleta').classList.add('activa');
+        actualizarIndicadorPasos(3);
+        document.getElementById('numeroBoleta').focus();
     }
 
     // ===== REGISTRAR BOLETA =====
@@ -714,7 +821,9 @@
                     fecha_canje: fechaHoraActual.timestamp.toISOString(),
                     dni_cliente: clienteDniActual,
                     sede: 'Larco',
-                    numero_boleta: numeroBoleta
+                    numero_boleta: numeroBoleta,
+                    verificado_visualmente: verificacionVisualConfirmada,
+                    fecha_verificacion: fechaHoraActual.timestamp.toISOString()
                 })
                 .eq('id', cuponActualId);
 
@@ -753,10 +862,13 @@
         document.getElementById('numeroCuponInput').value = '';
         document.getElementById('numeroBoleta').value = '';
         document.getElementById('dniInput').value = '';
+        document.getElementById('checkVerificacionVisual').checked = false;
+        document.getElementById('btnConfirmarVerificacion').disabled = true;
         
         document.getElementById('errorDNI').textContent = '';
         document.getElementById('errorCupon').textContent = '';
         document.getElementById('errorBoleta').textContent = '';
+        document.getElementById('errorVerificacion').textContent = '';
         
         document.getElementById('infoDniValidado').style.display = 'none';
         document.getElementById('infoExito').style.display = 'none';
@@ -765,11 +877,14 @@
         
         document.getElementById('pasoDNI').classList.add('activa');
         document.getElementById('pasoCupon').classList.remove('activa');
+        document.getElementById('verificacionVisual').classList.remove('activa');
         document.getElementById('pasoBoleta').classList.remove('activa');
         
         clienteDniActual = null;
         clienteActual = null;
         cuponActualId = null;
+        numeroCuponActual = null;
+        verificacionVisualConfirmada = false;
         fechaHoraActual = null;
         
         actualizarIndicadorPasos(1);
@@ -790,9 +905,12 @@
         document.getElementById('dniInput').value = '';
         document.getElementById('numeroCuponInput').value = '';
         document.getElementById('numeroBoleta').value = '';
+        document.getElementById('checkVerificacionVisual').checked = false;
+        document.getElementById('btnConfirmarVerificacion').disabled = true;
         document.getElementById('errorDNI').textContent = '';
         document.getElementById('errorCupon').textContent = '';
         document.getElementById('errorBoleta').textContent = '';
+        document.getElementById('errorVerificacion').textContent = '';
         document.getElementById('infoDniValidado').style.display = 'none';
         document.getElementById('infoExito').style.display = 'none';
         document.getElementById('resumenTransaccion').classList.remove('visible');
@@ -800,11 +918,14 @@
         
         document.getElementById('pasoDNI').classList.add('activa');
         document.getElementById('pasoCupon').classList.remove('activa');
+        document.getElementById('verificacionVisual').classList.remove('activa');
         document.getElementById('pasoBoleta').classList.remove('activa');
         
         clienteDniActual = null;
         clienteActual = null;
         cuponActualId = null;
+        numeroCuponActual = null;
+        verificacionVisualConfirmada = false;
         fechaHoraActual = null;
         
         actualizarIndicadorPasos(1);
