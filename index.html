@@ -439,7 +439,6 @@
 <body>
 
 <div class="container">
-    <!-- PANTALLA DE LOGIN -->
     <div id="pantallaLogin" class="card">
         <div class="header">
             <div class="logo">🔐 Noraves</div>
@@ -455,7 +454,6 @@
         </div>
     </div>
 
-    <!-- PANTALLA DE CANJE -->
     <div id="pantallaCanje" class="card" style="display: none;">
         <div style="margin-bottom: 20px;">
             <div class="tienda-tag">✓ TIENDA LARCO</div>
@@ -465,14 +463,12 @@
             </div>
         </div>
 
-        <!-- INDICADOR DE PASOS -->
         <div class="paso-contador">
             <div class="paso-item activo" id="indicadorPaso1">1</div>
             <div class="paso-item" id="indicadorPaso2">2</div>
             <div class="paso-item" id="indicadorPaso3">3</div>
         </div>
 
-        <!-- PASO 1: VALIDAR DNI -->
         <div id="pasoDNI" class="seccion-paso activa">
             <div style="text-align: left;">
                 <p style="color: #666; font-size: 14px; font-weight: 600; margin-bottom: 12px;">
@@ -490,14 +486,12 @@
             </div>
         </div>
 
-        <!-- INFORMACIÓN DEL CLIENTE -->
         <div id="infoDniValidado" class="info-cliente">
             <div class="badge-verificado">✓ IDENTIDAD CONFIRMADA</div>
             <p><strong>👤 Cliente:</strong> <span id="nombreCliente"></span></p>
             <p><strong>🏢 Empresa:</strong> <span id="empresaCliente"></span></p>
         </div>
 
-        <!-- PASO 2: INGRESAR NÚMERO DE CUPÓN -->
         <div id="pasoCupon" class="seccion-paso">
             <div style="text-align: left;">
                 <p style="color: #666; font-size: 14px; font-weight: 600; margin-bottom: 12px;">
@@ -515,7 +509,6 @@
             </div>
         </div>
 
-        <!-- VERIFICACIÓN VISUAL DEL CUPÓN FÍSICO -->
         <div id="verificacionVisual" class="verificacion-visual">
             <div style="text-align: left;">
                 <p style="color: #666; font-size: 14px; font-weight: 600; margin-bottom: 4px;">
@@ -538,31 +531,28 @@
             <div id="errorVerificacion" class="alerta error"></div>
         </div>
 
-        <!-- PASO 3: INGRESAR NÚMERO DE BOLETA -->
         <div id="pasoBoleta" class="seccion-paso">
             <div style="text-align: left;">
                 <p style="color: #666; font-size: 14px; font-weight: 600; margin-bottom: 12px;">
                     🧾 PASO 3: Registrar Número de Boleta
                 </p>
             </div>
-            <input type="text" id="numeroBoleta" placeholder="Número de boleta (ej: 001234)" maxlength="20">
+            <input type="text" id="numeroBoleta" placeholder="Ej: B942-001234" maxlength="20">
             <button onclick="registrarBoleta(event)">✓ Confirmar Canje</button>
             <div id="errorBoleta" class="alerta error"></div>
             <div class="estado-procesando" id="estadoBoleta">
                 <div class="loading"></div> Procesando canje...
             </div>
             <div class="ayuda">
-                <strong>💡 Ayuda:</strong> Ingresa el número de boleta de caja. Este número es requerido para la auditoría
+                <strong>💡 Ayuda:</strong> Debe iniciar con <strong>B942-</strong>
             </div>
         </div>
 
-        <!-- MENSAJE DE ÉXITO -->
         <div id="infoExito" class="info-exito">
             <h3>🎉 ¡CANJE EXITOSO!</h3>
             <p>El cupón ha sido registrado correctamente en el sistema</p>
         </div>
 
-        <!-- RESUMEN DE TRANSACCIÓN -->
         <div id="resumenTransaccion" class="resumen-transaccion">
             <div class="resumen-item">
                 <span class="resumen-label">📋 Sede:</span>
@@ -582,7 +572,6 @@
             </div>
         </div>
 
-        <!-- BOTONES DE ACCIÓN -->
         <div id="botonesFinales" class="contenedor-botones" style="display: none;">
             <button onclick="resetearFormulario()">➕ Canjear Otro</button>
             <button class="btn-secundario" onclick="cerrarSesion()">🚪 Cerrar Sesión</button>
@@ -927,7 +916,7 @@
         document.getElementById('numeroBoleta').focus();
     }
 
-    // ===== REGISTRAR BOLETA =====
+    // ===== REGISTRAR BOLETA (MODIFICADO) =====
     async function registrarBoleta(e) {
         e.preventDefault();
         const numeroBoleta = document.getElementById('numeroBoleta').value.trim();
@@ -936,8 +925,14 @@
 
         errorDiv.textContent = '';
 
-        if (!numeroBoleta) {
-            errorDiv.textContent = '⚠️ Ingresa el número de boleta';
+        // Validación de Prefijo
+        if (!numeroBoleta.startsWith('B942-')) {
+            errorDiv.textContent = '❌ La boleta debe comenzar con el prefijo "B942-"';
+            return;
+        }
+        
+        if (numeroBoleta.length <= 5) {
+            errorDiv.textContent = '⚠️ Ingresa el número de boleta completo después de "B942-"';
             return;
         }
 
@@ -968,7 +963,6 @@
 
             if (errorBloqueoCliente) throw errorBloqueoCliente;
 
-            // Registrar en auditoría, reporte diario y sesión de caja
             await registrarAuditoria(numeroBoleta);
             await actualizarReporteDiario();
 
@@ -980,7 +974,6 @@
                     .eq('id', sesionCajaId);
             }
 
-            // Mostrar resumen
             document.getElementById('resumenSede').textContent = 'Larco';
             document.getElementById('resumenFecha').textContent = fechaHoraActual.fecha;
             document.getElementById('resumenHora').textContent = fechaHoraActual.hora;
