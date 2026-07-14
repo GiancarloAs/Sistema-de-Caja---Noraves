@@ -434,26 +434,6 @@
             cursor: pointer;
             line-height: 1.4;
         }
-
-        .btn-salir{
-    width:auto;
-    margin:0;
-    padding:10px 18px;
-    border:none;
-    border-radius:20px;
-    background:#28a745;
-    color:#fff;
-    font-size:14px;
-    font-weight:600;
-    cursor:pointer;
-    transition:all .2s ease;
-}
-
-.btn-salir:hover{
-    background:#218838;
-    transform:translateY(-1px);
-    box-shadow:0 4px 12px rgba(40,167,69,.35);
-}
     </style>
 </head>
 <body>
@@ -474,25 +454,16 @@
             <strong>💡 Ayuda:</strong> Solicita la contraseña al administrador si no la conoces
         </div>
     </div>
-  <div style="display:flex;
-            justify-content:space-between;
-            align-items:center;
-            margin-bottom:20px;">
 
-    <div class="tienda-tag" style="margin-bottom:0;">
-        ✓ TIENDA LARCO
-    </div>
+    <div id="pantallaCanje" class="card" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div class="tienda-tag" style="margin-bottom: 0;">✓ TIENDA LARCO</div>
+            <button class="btn-secundario" onclick="cancelarCanje()" style="width:auto; margin-top:0; padding:8px 14px; font-size:13px;">🚪 Salir</button>
+        </div>
 
-    <button class="btn-salir"
-            onclick="cancelarCanje()">
-        🚪 Salir
-    </button>
-
-</div>
-<div class="header" style="margin-bottom:0;">
-    <h2>Validación de Canje</h2>
-    <p>Sigue los pasos para registrar el canje</p>
-</div>
+        <div class="header" style="margin-bottom: 20px;">
+            <h2>Validación de Canje</h2>
+            <p>Sigue los pasos para registrar el canje</p>
         </div>
 
         <div class="paso-contador">
@@ -500,10 +471,6 @@
             <div class="paso-item" id="indicadorPaso2">2</div>
             <div class="paso-item" id="indicadorPaso3">3</div>
         </div>
-
-        <div style="text-align:right; margin-bottom:10px;">
-<button class="btn-secundario" onclick="cancelarCanje()" style="width:auto;padding:8px 14px;font-size:13px;margin:0;">🚪 Salir</button>
-</div>
 
         <div id="pasoDNI" class="seccion-paso activa">
             <div style="text-align: left;">
