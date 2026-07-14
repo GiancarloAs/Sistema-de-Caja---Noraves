@@ -434,9 +434,40 @@
             cursor: pointer;
             line-height: 1.4;
         }
+
+        .btn-cerrar-sesion-flotante {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: #f8f9fa;
+    color: #6c757d;
+    border: 1px solid #dee2e6;
+    padding: 6px 12px;
+    font-size: 11px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    z-index: 100;
+}
+
+.btn-cerrar-sesion-flotante:hover {
+    background: #fee;
+    color: #c33;
+    border-color: #c33;
+}
     </style>
 </head>
 <body>
+    <div id="pantallaCanje" class="card" style="display: none;">
+    <button class="btn-cerrar-sesion-flotante" onclick="cerrarSesion()">🚪 Cerrar Sesión</button>
+    
+    <div style="margin-bottom: 20px;">
+        <div class="tienda-tag">✓ TIENDA LARCO</div>
+        <div class="header" style="margin-bottom: 0;">
+            <h2>Validación de Canje</h2>
+            <p>Sigue los pasos para registrar el canje</p>
+        </div>
+    </div> 
 
 <div class="container">
     <div id="pantallaLogin" class="card">
