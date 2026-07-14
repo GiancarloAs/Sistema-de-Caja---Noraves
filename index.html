@@ -447,6 +447,7 @@
         </div>
         <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Ingresa tu contraseña para acceder</p>
         <input type="password" id="passTienda" placeholder="Contraseña" autocomplete="current-password">
+        <div id="cargandoLogin" style="display:none; font-size:13px; color:#667eea; margin-top:8px;">Verificando…</div>
         <button onclick="loginTienda(event)">🔓 Acceder al Sistema</button>
         <div id="errorLogin" class="alerta error"></div>
         <div class="ayuda">
@@ -583,6 +584,9 @@
     // ===== CONFIGURACIÓN SUPABASE =====
     const SUPABASE_URL = 'https://aollztxtygxarlueflxq.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvbGx6dHh0eWd4YXJsdWVmbHhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMjU0NzMsImV4cCI6MjA5ODYwMTQ3M30.v3LIghE_kbpab9j2fVx_qmawKbbsTCX0ZxsoyeZRo-Q';
+    // Cuenta fija de la caja de esta tienda, creada manualmente en Supabase (Authentication > Users).
+    // La contraseña real vive únicamente en Supabase, no en este archivo.
+    const CAJA_EMAIL = 'caja.larco@noraves.com';
     let supabase;
 
     // Variables globales
@@ -613,6 +617,15 @@
     // ===== INICIALIZAR SUPABASE =====
     async function inicializarSupabase() {
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Si ya hay una sesión válida (p.ej. no cerró sesión antes), entra directo.
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            document.getElementById('pantallaLogin').style.display = 'none';
+            document.getElementById('pantallaCanje').style.display = 'block';
+            limpiarFormulario();
+            await crearSesionCaja();
+        }
     }
 
     // ===== OBTENER FECHA Y HORA ACTUAL =====
@@ -754,26 +767,39 @@
         }
     }
 
-    // ===== LOGIN DE TIENDA =====
+    // ===== LOGIN DE TIENDA (autenticación real contra Supabase) =====
     async function loginTienda(e) {
         e.preventDefault();
         const pass = document.getElementById('passTienda').value;
         const errorDiv = document.getElementById('errorLogin');
-        
+        const cargandoDiv = document.getElementById('cargandoLogin');
+
+        errorDiv.textContent = '';
+
         if (!pass) {
             errorDiv.textContent = '⚠️ Ingresa la contraseña';
             return;
         }
 
-        if (pass === 'tienlar01') {
-            document.getElementById('pantallaLogin').style.display = 'none';
-            document.getElementById('pantallaCanje').style.display = 'block';
-            limpiarFormulario();
-            await crearSesionCaja();
-            document.getElementById('dniInput').focus();
-        } else {
+        cargandoDiv.style.display = 'block';
+
+        const { error } = await supabase.auth.signInWithPassword({
+            email: CAJA_EMAIL,
+            password: pass
+        });
+
+        cargandoDiv.style.display = 'none';
+
+        if (error) {
             errorDiv.textContent = '❌ Contraseña incorrecta';
+            return;
         }
+
+        document.getElementById('pantallaLogin').style.display = 'none';
+        document.getElementById('pantallaCanje').style.display = 'block';
+        limpiarFormulario();
+        await crearSesionCaja();
+        document.getElementById('dniInput').focus();
     }
 
     // ===== VALIDAR DNI =====
@@ -1031,6 +1057,7 @@
     // ===== CERRAR SESIÓN =====
     async function cerrarSesion() {
         await cerrarSesionCaja();
+        await supabase.auth.signOut();
         document.getElementById('pantallaCanje').style.display = 'none';
         document.getElementById('pantallaLogin').style.display = 'block';
         document.getElementById('passTienda').value = '';
@@ -1093,3 +1120,4 @@
 
 </body>
 </html>
+
