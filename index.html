@@ -434,40 +434,9 @@
             cursor: pointer;
             line-height: 1.4;
         }
-
-        .btn-cerrar-sesion-flotante {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    background: #f8f9fa;
-    color: #6c757d;
-    border: 1px solid #dee2e6;
-    padding: 6px 12px;
-    font-size: 11px;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s;
-    z-index: 100;
-}
-
-.btn-cerrar-sesion-flotante:hover {
-    background: #fee;
-    color: #c33;
-    border-color: #c33;
-}
     </style>
 </head>
 <body>
-    <div id="pantallaCanje" class="card" style="display: none;">
-    <button class="btn-cerrar-sesion-flotante" onclick="cerrarSesion()">🚪 Cerrar Sesión</button>
-    
-    <div style="margin-bottom: 20px;">
-        <div class="tienda-tag">✓ TIENDA LARCO</div>
-        <div class="header" style="margin-bottom: 0;">
-            <h2>Validación de Canje</h2>
-            <p>Sigue los pasos para registrar el canje</p>
-        </div>
-    </div> 
 
 <div class="container">
     <div id="pantallaLogin" class="card">
@@ -500,6 +469,8 @@
             <div class="paso-item" id="indicadorPaso2">2</div>
             <div class="paso-item" id="indicadorPaso3">3</div>
         </div>
+
+        <button class="btn-secundario" onclick="cancelarCanje()" style="margin-bottom:20px;">🚪 Cancelar Canje y Salir</button>
 
         <div id="pasoDNI" class="seccion-paso activa">
             <div style="text-align: left;">
@@ -1085,7 +1056,21 @@
         document.getElementById('dniInput').focus();
     }
 
+    
+// ===== CANCELAR CANJE Y SALIR =====
+    async function cancelarCanje() {
+        if (!confirm('¿Cancelar el canje y cerrar la sesión?\n\nSe perderá el proceso actual.')) return;
+        limpiarFormulario();
+        await cerrarSesionCaja();
+        await supabase.auth.signOut();
+        document.getElementById('pantallaCanje').style.display='none';
+        document.getElementById('pantallaLogin').style.display='block';
+        document.getElementById('passTienda').value='';
+        document.getElementById('passTienda').focus();
+    }
+
     // ===== CERRAR SESIÓN =====
+
     async function cerrarSesion() {
         await cerrarSesionCaja();
         await supabase.auth.signOut();
@@ -1151,4 +1136,3 @@
 
 </body>
 </html>
-
